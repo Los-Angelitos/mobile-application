@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
+import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 
 class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
@@ -79,12 +80,14 @@ class AccountPage extends StatelessWidget {
                     },
                     isSelected: true,
                   ),
-                  buildListTile(
-                    context,
-                    icon: Icons.tune,
-                    text: 'My preferences as a Guest',
-                    onTap: () => navigateTo(context, 'Guest Preferences'),
-                  ),
+                  buildListTile(context,
+                      icon: Icons.tune,
+                      text: 'My preferences as a Guest', onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => UserPreferencesPage()),
+                    );
+                  }),
                   buildListTile(
                     context,
                     icon: Icons.schedule,
