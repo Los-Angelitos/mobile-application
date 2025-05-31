@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_account.dart';
+import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,8 +23,9 @@ class MyHomePage extends StatelessWidget {
       initialRoute: '/home',
       routes: {
         '/home': (context) => const HomeView(), // the default app's entry point
-        '/profile/account': (context) => AccountPage(),
+        '/profile/account': (context) => const AccountPage(),
         '/profile/info': (context) => ProfilePage(),
+        '/profile/preferences': (context) => UserPreferencesPage(),
         /* '/login': (context) => const LogInScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         // '/subscription': (context) => const SubscriptionPlansView(),
