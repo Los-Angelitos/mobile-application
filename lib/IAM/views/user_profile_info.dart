@@ -9,7 +9,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final _countries = ['Perú', 'Argentina', 'Chile'];
   final _languages = ['Español', 'Inglés', 'Portugués'];
 
-  // Estado simulado
   Map<String, dynamic> _userData = {};
   Map<String, bool> _editMode = {
     'name': false,
@@ -32,7 +31,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadUserData() async {
-    // Simulamos llamada a API
     await Future.delayed(const Duration(seconds: 1));
     setState(() {
       _userData = {
@@ -51,7 +49,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _updateField(String field) async {
     setState(() => _editMode[field] = false);
-    await Future.delayed(const Duration(seconds: 1)); // Simula llamada API
+    await Future.delayed(const Duration(seconds: 1));
     setState(() {
       _userData[field] = _controllers[field]!.text;
       if (field == 'password') {
@@ -64,39 +62,19 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("Profile")),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Card(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 32,
-                      backgroundImage:
-                          NetworkImage('https://i.pravatar.cc/150?img=3'),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_userData['name'] ?? '',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16)),
-                        const Text('Guest',
-                            style: TextStyle(color: Colors.grey)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildProfileHeader(),
             const SizedBox(height: 16),
             _buildEditableInfo(),
             const SizedBox(height: 16),
@@ -107,24 +85,66 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildProfileHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 32,
+            backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=3'),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_userData['name'] ?? '',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text('Guest', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEditableInfo() {
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Personal information',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            _editableRow('name', 'Full name'),
-            _editableRow('email', 'Email address'),
-            _editableRow('phone', 'Phone number'),
-            _editableRow('password', 'Password'),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Personal information',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 12),
+          _editableRow('name', 'Full name'),
+          _editableRow('email', 'Email address'),
+          _editableRow('phone', 'Phone number'),
+          _editableRow('password', 'Password'),
+        ],
       ),
     );
   }
@@ -159,57 +179,63 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildAdditionalForm() {
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Additional information',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text('Additional information',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            decoration: const InputDecoration(
+              labelText: 'Birth date',
+              hintText: 'dd/mm/aaaa',
+              suffixIcon: Icon(Icons.calendar_today),
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Birth date',
-                hintText: 'dd/mm/aaaa',
-                suffixIcon: Icon(Icons.calendar_today),
-              ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(labelText: 'Country'),
+            value: _countries.first,
+            items: _countries
+                .map((c) => DropdownMenuItem<String>(value: c, child: Text(c)))
+                .toList(),
+            onChanged: (value) {},
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(labelText: 'Favorite language'),
+            value: _languages.first,
+            items: _languages
+                .map((l) => DropdownMenuItem<String>(value: l, child: Text(l)))
+                .toList(),
+            onChanged: (value) {},
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {},
+            child: const Text('Save changes',
+                style: TextStyle(fontSize: 16, color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2B61B6),
+              minimumSize: const Size.fromHeight(45),
             ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Country'),
-              value: _countries.first,
-              items: _countries
-                  .map(
-                      (c) => DropdownMenuItem<String>(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (value) {},
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Favorite language'),
-              value: _languages.first,
-              items: _languages
-                  .map(
-                      (l) => DropdownMenuItem<String>(value: l, child: Text(l)))
-                  .toList(),
-              onChanged: (value) {},
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {},
-              child: const Text('Guardar cambios'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                minimumSize: const Size.fromHeight(45),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
