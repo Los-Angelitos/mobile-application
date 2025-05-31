@@ -129,7 +129,13 @@ class _AccountPageState extends State<AccountPage> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => ProfilePage()),
+                        MaterialPageRoute(
+                          builder: (_) => ProfilePage(
+                            ownerProfile: widget.ownerProfile,
+                            guestProfile: widget.guestProfile,
+                            userType: userRole,
+                          ),
+                        ),
                       );
                     },
                     isSelected: true,

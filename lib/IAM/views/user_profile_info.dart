@@ -1,17 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
+import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
+import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
 
 class ProfilePage extends StatefulWidget {
+  Owner? ownerProfile;
+  Guest? guestProfile;
+  String? userType;
+
+  ProfilePage(
+      {super.key, this.ownerProfile, this.guestProfile, this.userType}) {
+    print('ProfilePage initialized with userType: $userType');
+    print('Owner Profile: ${ownerProfile?.toJson()}');
+    print('Guest Profile: ${guestProfile?.toJson()}');
+  }
+
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final UserService userService = UserService();
+
+  String get userFullName {
+    return widget.ownerProfile?.name ??
+        widget.guestProfile?.name ??
+        'Unknown User';
+  }
+
+  String get userRole {
+    return widget.ownerProfile != null ? 'Owner' : 'Guest';
+  }
+
+  String get userPhotoURL {
+    return widget.ownerProfile?.photoURL ??
+        widget.guestProfile?.photoURL ??
+        'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg'; // Default image
+  }
+
   final _countries = ['Perú', 'Argentina', 'Chile'];
   final _languages = ['Español', 'Inglés', 'Portugués'];
 
   Map<String, dynamic> _userData = {};
   Map<String, bool> _editMode = {
     'name': false,
+    'surname': false,
     'email': false,
     'phone': false,
     'password': false,
@@ -19,6 +52,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   final _controllers = {
     'name': TextEditingController(),
+    'surname': TextEditingController(),
     'email': TextEditingController(),
     'phone': TextEditingController(),
     'password': TextEditingController(),
@@ -31,20 +65,59 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadUserData() async {
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
+    if (widget.guestProfile == null && widget.ownerProfile == null) {
+      final userId = 72221572; // Replace with actual user ID logic
+      final roleId = 3; // Replace with actual role ID logic
+
+      try {
+        widget.guestProfile = await userService.getGuestProfile(userId);
+        widget.ownerProfile = await userService.getOwnerProfile(userId);
+
+        if (widget.guestProfile != null) {
+          widget.userType = 'Guest';
+        } else if (widget.ownerProfile != null) {
+          widget.userType = 'Owner';
+        } else {
+          widget.userType = 'unknown';
+        }
+      } catch (e) {
+        print('Error fetching guest profile: $e');
+      }
+    }
+
+    if (widget.userType == 'Owner') {
       _userData = {
-        'name': 'Arian Rodriguez',
-        'email': 'arianrmv12@gmail.com',
-        'phone': '+34 654 123 456',
+        'name': widget.ownerProfile?.name ?? '',
+        'surname': widget.ownerProfile?.surname ?? '',
+        'email': widget.ownerProfile?.email ?? '',
+        'phone': widget.ownerProfile?.phone ?? '',
         'password': '********'
       };
+    } else if (widget.userType == 'Guest') {
+      _userData = {
+        'name': widget.guestProfile?.name ?? '',
+        'surname': widget.guestProfile?.surname ?? '',
+        'email': widget.guestProfile?.email ?? '',
+        'phone': widget.guestProfile?.phone ?? '',
+        'password': '********'
+      };
+    } else {
+      _userData = {
+        'name': 'Unknown User',
+        'surname': 'Unknown Surname',
+        'email': '',
+        'phone': '',
+        'password': '********'
+      };
+    }
 
-      _controllers['name']!.text = _userData['name'];
-      _controllers['email']!.text = _userData['email'];
-      _controllers['phone']!.text = _userData['phone'];
-      _controllers['password']!.text = '';
-    });
+    _controllers['name']!.text = _userData['name'];
+    _controllers['surname']!.text =
+        _userData['surname']; // Assuming surname is same as name
+    _controllers['email']!.text = _userData['email'];
+    _controllers['phone']!.text = _userData['phone'];
+    _controllers['password']!.text = '';
+    setState(() {});
   }
 
   Future<void> _updateField(String field) async {
@@ -101,9 +174,9 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 32,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=3'),
+            backgroundImage: NetworkImage(userPhotoURL),
           ),
           const SizedBox(width: 16),
           Column(
@@ -112,7 +185,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Text(_userData['name'] ?? '',
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16)),
-              const Text('Guest', style: TextStyle(color: Colors.grey)),
+              Text(userRole, style: TextStyle(color: Colors.grey)),
             ],
           ),
         ],
@@ -140,7 +213,8 @@ class _ProfilePageState extends State<ProfilePage> {
           const Text('Personal information',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
-          _editableRow('name', 'Full name'),
+          _editableRow('name', 'Name'),
+          _editableRow('surname', 'Surname'),
           _editableRow('email', 'Email address'),
           _editableRow('phone', 'Phone number'),
           _editableRow('password', 'Password'),
