@@ -1,9 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
+import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
+import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 
-class AccountPage extends StatelessWidget {
-  const AccountPage({super.key});
+class AccountPage extends StatefulWidget {
+  AccountPage({super.key});
+  final UserService userService = UserService();
+  Guest? guestProfile;
+  Owner? ownerProfile;
+
+  @override
+  State<AccountPage> createState() => _AccountPageState();
+}
+
+class _AccountPageState extends State<AccountPage> {
+  @override
+  void initState() {
+    super.initState();
+    fetchUserProfile();
+  }
+
+  String get userFullName {
+    return widget.ownerProfile?.name ??
+        widget.guestProfile?.name ??
+        'Unknown User';
+  }
+
+  String get userRole {
+    return widget.ownerProfile != null ? 'Owner' : 'Guest';
+  }
+
+  String get userPhotoURL {
+    return widget.ownerProfile?.photoURL ??
+        widget.guestProfile?.photoURL ??
+        'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg'; // Default image
+  }
+
+  Future<void> fetchUserProfile() async {
+    try {
+      // Assuming you have a way to get the current user's ID
+      final userId = 72221572; // Replace with actual user ID logic
+      final roleId = 3;
+      widget.guestProfile = await widget.userService.getGuestProfile(userId);
+      widget.ownerProfile = await widget.userService.getOwnerProfile(userId);
+      setState(() {});
+
+      print(
+          'User profile fetched successfully: ${widget.guestProfile?.toJson()}');
+      print(
+          'Owner profile fetched successfully: ${widget.ownerProfile?.toJson()}');
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
 
   void navigateTo(BuildContext context, String routeName) {
     Navigator.push(
@@ -44,24 +98,24 @@ class AccountPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 30,
-                    backgroundImage: NetworkImage(
-                        'https://i.pravatar.cc/150?img=3'), // imagen ejemplo
+                    backgroundImage:
+                        NetworkImage(userPhotoURL), // imagen ejemplo
                   ),
                   const SizedBox(height: 8),
                   Column(
                     children: [
-                      const Text(
-                        'Arian Rodriguez',
+                      Text(
+                        userFullName,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Guest',
+                      Text(
+                        userRole,
                         style: TextStyle(color: Colors.grey),
                       ),
                     ],

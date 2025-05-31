@@ -23,7 +23,7 @@ class MyHomePage extends StatelessWidget {
       initialRoute: '/home',
       routes: {
         '/home': (context) => const HomeView(), // the default app's entry point
-        '/profile/account': (context) => const AccountPage(),
+        '/profile/account': (context) => AccountPage(),
         '/profile/info': (context) => ProfilePage(),
         '/profile/preferences': (context) => UserPreferencesPage(),
         /* '/login': (context) => const LogInScreen(),
