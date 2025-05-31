@@ -11,6 +11,9 @@ class AccountPage extends StatefulWidget {
   Guest? guestProfile;
   Owner? ownerProfile;
 
+  final userId = 72221572; // Replace with actual user ID logic
+  final roleId = 3; // Replace with actual role ID logic
+
   @override
   State<AccountPage> createState() => _AccountPageState();
 }
@@ -40,11 +43,10 @@ class _AccountPageState extends State<AccountPage> {
 
   Future<void> fetchUserProfile() async {
     try {
-      // Assuming you have a way to get the current user's ID
-      final userId = 72221572; // Replace with actual user ID logic
-      final roleId = 3;
-      widget.guestProfile = await widget.userService.getGuestProfile(userId);
-      widget.ownerProfile = await widget.userService.getOwnerProfile(userId);
+      widget.guestProfile =
+          await widget.userService.getGuestProfile(widget.userId);
+      widget.ownerProfile =
+          await widget.userService.getOwnerProfile(widget.userId);
       setState(() {});
 
       print(
@@ -126,8 +128,8 @@ class _AccountPageState extends State<AccountPage> {
                     context,
                     icon: Icons.person,
                     text: 'Personal Information',
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => ProfilePage(
@@ -137,6 +139,7 @@ class _AccountPageState extends State<AccountPage> {
                           ),
                         ),
                       );
+                      fetchUserProfile(); // Refresh profile data
                     },
                     isSelected: true,
                   ),
