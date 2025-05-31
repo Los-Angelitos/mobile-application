@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
+import 'package:sweetmanager/IAM/domain/model/queries/update_user_profile_request.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
 
 class ProfilePage extends StatefulWidget {
   Owner? ownerProfile;
   Guest? guestProfile;
   String? userType;
+
+  final userId = 72221572; // Replace with actual user ID logic
+  final roleId = 3; // Replace with actual role ID logic
 
   ProfilePage(
       {super.key, this.ownerProfile, this.guestProfile, this.userType}) {
@@ -66,12 +70,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadUserData() async {
     if (widget.guestProfile == null && widget.ownerProfile == null) {
-      final userId = 72221572; // Replace with actual user ID logic
-      final roleId = 3; // Replace with actual role ID logic
-
       try {
-        widget.guestProfile = await userService.getGuestProfile(userId);
-        widget.ownerProfile = await userService.getOwnerProfile(userId);
+        widget.guestProfile = await userService.getGuestProfile(widget.userId);
+        widget.ownerProfile = await userService.getOwnerProfile(widget.userId);
 
         if (widget.guestProfile != null) {
           widget.userType = 'Guest';
@@ -122,13 +123,79 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _updateField(String field) async {
     setState(() => _editMode[field] = false);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _userData[field] = _controllers[field]!.text;
-      if (field == 'password') {
-        _userData[field] = '********';
+
+    try {
+      String newValue = _controllers[field]!.text.trim();
+      if (newValue.isEmpty) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Field cannot be empty')));
+
+        return;
       }
-    });
+
+      if (newValue == _userData[field]) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$field has not changed')),
+        );
+
+        return;
+      }
+
+      if (field == 'password') {
+        newValue = '********'; // Placeholder for actual password handling
+      }
+
+      // Update the user data locally
+      _userData[field] = newValue;
+
+      // Call the service to update the user profile
+      final request = EditUserProfileRequest(
+        name: _userData['name'],
+        surname: _userData['surname'],
+        phone: _userData['phone'],
+        email: _userData['email'],
+        state: (widget.userType == 'Owner')
+            ? widget.ownerProfile?.state
+            : widget.guestProfile?.state,
+        roleId: widget.roleId,
+        photoURL: userPhotoURL, // Assuming photo URL remains unchanged
+      );
+
+      final success = await userService.updateUserProfile(
+        request,
+        widget.userId,
+        widget.roleId,
+      );
+
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update $field')),
+        );
+        print('Failed to update $field');
+
+        setState(() {
+          _userData[field] =
+              _controllers[field]!.text; // Revert to previous value
+        });
+
+        return;
+      }
+
+      // If successful, update the UI
+      setState(() {
+        _userData[field] = newValue;
+        _controllers[field]!.text = newValue; // Update controller text
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$field updated successfully')),
+      );
+    } catch (e) {
+      print('Error updating $field: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update $field: $e')),
+      );
+    }
   }
 
   @override
