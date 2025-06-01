@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
 import 'package:sweetmanager/IAM/domain/model/queries/update_user_profile_request.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
+import 'package:sweetmanager/shared/infrastructure/services/cloudinary_service.dart';
 
 class ProfilePage extends StatefulWidget {
   Owner? ownerProfile;
   Guest? guestProfile;
   String? userType;
 
-  final userId = 72221572; // Replace with actual user ID logic
-  final roleId = 3; // Replace with actual role ID logic
+  final userId = 72221572;
+  final roleId = 3;
 
   ProfilePage(
       {super.key, this.ownerProfile, this.guestProfile, this.userType}) {
@@ -25,6 +32,13 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final UserService userService = UserService();
+  final ImagePicker _picker = ImagePicker();
+  late final CloudinaryService cloudinaryService;
+
+  bool _isUploadingPhoto = false;
+  String? _selectedImagePath;
+  Uint8List? _webImageBytes; // Para web
+  String? _tempImageUrl; // URL temporal para preview
 
   String get userFullName {
     return widget.ownerProfile?.name ??
@@ -37,9 +51,11 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   String get userPhotoURL {
-    return widget.ownerProfile?.photoURL ??
+    // Prioridad: imagen temporal -> imagen guardada -> default
+    return _tempImageUrl ??
+        widget.ownerProfile?.photoURL ??
         widget.guestProfile?.photoURL ??
-        'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg'; // Default image
+        'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg';
   }
 
   final _countries = ['Perú', 'Argentina', 'Chile'];
@@ -65,6 +81,9 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+
+    cloudinaryService = CloudinaryService();
+
     _loadUserData();
   }
 
@@ -92,7 +111,8 @@ class _ProfilePageState extends State<ProfilePage> {
         'surname': widget.ownerProfile?.surname ?? '',
         'email': widget.ownerProfile?.email ?? '',
         'phone': widget.ownerProfile?.phone ?? '',
-        'password': '********'
+        'password': '********',
+        'photoURL': widget.ownerProfile?.photoURL ?? '',
       };
     } else if (widget.userType == 'Guest') {
       _userData = {
@@ -100,7 +120,8 @@ class _ProfilePageState extends State<ProfilePage> {
         'surname': widget.guestProfile?.surname ?? '',
         'email': widget.guestProfile?.email ?? '',
         'phone': widget.guestProfile?.phone ?? '',
-        'password': '********'
+        'password': '********',
+        'photoURL': widget.guestProfile?.photoURL ?? '',
       };
     } else {
       _userData = {
@@ -108,47 +129,185 @@ class _ProfilePageState extends State<ProfilePage> {
         'surname': 'Unknown Surname',
         'email': '',
         'phone': '',
-        'password': '********'
+        'password': '********',
+        'photoURL': '',
       };
     }
 
     _controllers['name']!.text = _userData['name'];
-    _controllers['surname']!.text =
-        _userData['surname']; // Assuming surname is same as name
+    _controllers['surname']!.text = _userData['surname'];
     _controllers['email']!.text = _userData['email'];
     _controllers['phone']!.text = _userData['phone'];
     _controllers['password']!.text = '';
     setState(() {});
   }
 
-  Future<void> _updateField(String field) async {
-    setState(() => _editMode[field] = false);
+  Future<void> _showImagePickerOptions() async {
+    if (kIsWeb) {
+      // En web, solo mostrar opción de galería
+      _showWebImagePicker();
+    } else {
+      // En móvil, mostrar todas las opciones
+      showModalBottomSheet(
+        context: context,
+        builder: (BuildContext context) {
+          return SafeArea(
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Seleccionar de galería'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera),
+                  title: const Text('Tomar foto'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                if (_userData['photoURL']?.isNotEmpty == true ||
+                    _tempImageUrl != null)
+                  ListTile(
+                    leading: const Icon(Icons.delete, color: Colors.red),
+                    title: const Text('Eliminar foto actual'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      _removeCurrentPhoto();
+                    },
+                  ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  void _showWebImagePicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Cambiar foto de perfil'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Selecciona una imagen desde tu dispositivo:'),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _pickImage(ImageSource.gallery);
+                    },
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Seleccionar'),
+                  ),
+                  if (_userData['photoURL']?.isNotEmpty == true ||
+                      _tempImageUrl != null)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _removeCurrentPhoto();
+                      },
+                      icon: const Icon(Icons.delete),
+                      label: const Text('Eliminar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      // En web, solo funciona gallery
+      final ImageSource actualSource = kIsWeb ? ImageSource.gallery : source;
+
+      final XFile? image = await _picker.pickImage(
+        source: actualSource,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        if (kIsWeb) {
+          // Para web, leer como bytes
+          _webImageBytes = await image.readAsBytes();
+          // Crear URL temporal para preview
+          _tempImageUrl =
+              'data:image/jpeg;base64,${base64Encode(_webImageBytes!)}';
+        } else {
+          // Para móvil, usar path
+          _selectedImagePath = image.path;
+        }
+
+        setState(() {});
+        await _uploadImageToCloudinary(image);
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error seleccionando imagen: $e')),
+      );
+    }
+  }
+
+  Future<void> _uploadImageToCloudinary(XFile image) async {
+    setState(() {
+      _isUploadingPhoto = true;
+    });
 
     try {
-      String newValue = _controllers[field]!.text.trim();
-      if (newValue.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Field cannot be empty')));
+      // Usar el servicio generalizado
+      final imageUrl = await cloudinaryService.uploadImage(
+        image,
+        folder: 'user_profiles', // Carpeta opcional
+        webImageBytes: _webImageBytes, // Requerido para web
+        publicId: 'user_${widget.userId}_profile', // ID único opcional
+        tags: ['profile', 'user'], // Tags opcionales
+      );
 
-        return;
-      }
+      await _updateProfilePhoto(imageUrl);
+    } on CloudinaryException catch (e) {
+      print('Cloudinary error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error subiendo imagen: ${e.message}')),
+      );
+    } catch (e) {
+      print('Error uploading image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error subiendo imagen: $e')),
+      );
+    } finally {
+      setState(() {
+        _isUploadingPhoto = false;
+        _selectedImagePath = null;
+        _webImageBytes = null;
+      });
+    }
+  }
 
-      if (newValue == _userData[field]) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$field has not changed')),
-        );
+  Future<void> _updateProfilePhoto(String newPhotoURL) async {
+    try {
+      _userData['photoURL'] = newPhotoURL;
+      _tempImageUrl = newPhotoURL;
 
-        return;
-      }
-
-      if (field == 'password') {
-        newValue = '********'; // Placeholder for actual password handling
-      }
-
-      // Update the user data locally
-      _userData[field] = newValue;
-
-      // Call the service to update the user profile
       final request = EditUserProfileRequest(
         name: _userData['name'],
         surname: _userData['surname'],
@@ -158,7 +317,113 @@ class _ProfilePageState extends State<ProfilePage> {
             ? widget.ownerProfile?.state
             : widget.guestProfile?.state,
         roleId: widget.roleId,
-        photoURL: userPhotoURL, // Assuming photo URL remains unchanged
+        photoURL: newPhotoURL,
+      );
+
+      final success = await userService.updateUserProfile(
+        request,
+        widget.userId,
+        widget.roleId,
+      );
+
+      if (success) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Foto de perfil actualizada exitosamente')),
+        );
+      } else {
+        throw Exception('Failed to update profile photo');
+      }
+    } catch (e) {
+      print('Error updating profile photo: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error actualizando foto de perfil: $e')),
+      );
+
+      setState(() {
+        _userData['photoURL'] = userPhotoURL;
+        _tempImageUrl = null;
+      });
+    }
+  }
+
+  Future<void> _removeCurrentPhoto() async {
+    try {
+      setState(() {
+        _tempImageUrl = null;
+        _userData['photoURL'] = '';
+      });
+
+      await _updateProfilePhoto('');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto de perfil eliminada')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error eliminando foto: $e')),
+      );
+    }
+  }
+
+  // Widget para mostrar la imagen según la plataforma
+  Widget _buildProfileImage() {
+    if (kIsWeb && _webImageBytes != null) {
+      // En web, mostrar desde bytes
+      return CircleAvatar(
+        radius: 32,
+        backgroundImage: MemoryImage(_webImageBytes!),
+      );
+    } else if (!kIsWeb && _selectedImagePath != null) {
+      // En móvil, mostrar desde archivo
+      return CircleAvatar(
+        radius: 32,
+        backgroundImage: FileImage(File(_selectedImagePath!)),
+      );
+    } else {
+      // Imagen por defecto o desde URL
+      return CircleAvatar(
+        radius: 32,
+        backgroundImage: NetworkImage(userPhotoURL),
+      );
+    }
+  }
+
+  Future<void> _updateField(String field) async {
+    setState(() => _editMode[field] = false);
+
+    try {
+      String newValue = _controllers[field]!.text.trim();
+      if (newValue.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Field cannot be empty')));
+        return;
+      }
+
+      if (newValue == _userData[field]) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$field has not changed')),
+        );
+        return;
+      }
+
+      if (field == 'password') {
+        newValue = '********';
+      }
+
+      _userData[field] = newValue;
+
+      final request = EditUserProfileRequest(
+        name: _userData['name'],
+        surname: _userData['surname'],
+        phone: _userData['phone'],
+        email: _userData['email'],
+        state: (widget.userType == 'Owner')
+            ? widget.ownerProfile?.state
+            : widget.guestProfile?.state,
+        roleId: widget.roleId,
+        photoURL: _userData['photoURL'],
       );
 
       final success = await userService.updateUserProfile(
@@ -171,20 +436,15 @@ class _ProfilePageState extends State<ProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update $field')),
         );
-        print('Failed to update $field');
-
         setState(() {
-          _userData[field] =
-              _controllers[field]!.text; // Revert to previous value
+          _userData[field] = _controllers[field]!.text;
         });
-
         return;
       }
 
-      // If successful, update the UI
       setState(() {
         _userData[field] = newValue;
-        _controllers[field]!.text = newValue; // Update controller text
+        _controllers[field]!.text = newValue;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -206,14 +466,32 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        title: kIsWeb
+            ? const Text('Perfil (Modo Web)',
+                style: TextStyle(color: Colors.grey))
+            : null,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            if (kIsWeb)
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  '📱 Funcionalidad completa disponible en dispositivos móviles. En web solo se puede seleccionar desde galería.',
+                  style: TextStyle(color: Colors.blue, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             _buildProfileHeader(),
             const SizedBox(height: 16),
             _buildEditableInfo(),
@@ -241,19 +519,80 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundImage: NetworkImage(userPhotoURL),
+          Stack(
+            children: [
+              // Avatar
+              _buildProfileImage(),
+
+              // Loading overlay
+              if (_isUploadingPhoto)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Edit button overlay
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: _isUploadingPhoto ? null : _showImagePickerOptions,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2B61B6),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      kIsWeb ? Icons.upload : Icons.camera_alt,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(_userData['name'] ?? '',
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _userData['name'] ?? '',
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(userRole, style: TextStyle(color: Colors.grey)),
-            ],
+                      fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                Text(userRole, style: const TextStyle(color: Colors.grey)),
+                if (_isUploadingPhoto)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Subiendo foto...',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -369,12 +708,12 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: () {},
-            child: const Text('Save changes',
-                style: TextStyle(fontSize: 16, color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2B61B6),
               minimumSize: const Size.fromHeight(45),
             ),
+            child: const Text('Save changes',
+                style: TextStyle(fontSize: 16, color: Colors.white)),
           ),
         ],
       ),
