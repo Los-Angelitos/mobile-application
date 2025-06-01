@@ -7,34 +7,106 @@ import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 class AuthService extends BaseService {
 
   Future<bool> login(String email, String password, int roleId) async {
-    try {
-      final response = await http.post(Uri.parse('$baseUrl/authentication/sign-in'),
+  print("login() called with email: $email, roleId: $roleId");
+
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/authentication/sign-in'),
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: jsonEncode({
         'email': email,
         'password': password,
-        'roleId': roleId
-      }));
+        'roleId': roleId,
+      }),
+    );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+    print("HTTP status code: ${response.statusCode}");
+    print("Response body: ${response.body}");
 
-        await storage.write(key: 'token', value: data['token']);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      print("Login successful, token: ${data['token']}");
 
+      await storage.write(key: 'token', value: data['token']);
+      return true;
+    } else {
+      print("Login failed: ${response.statusCode}");
+      return false;
+    }
+  } catch (e, stack) {
+    print("Exception in login(): $e");
+    print("Stack trace: $stack");
+    rethrow;
+  }
+}
+
+
+Future<bool> signupOwner(int id, String name, String surname, String phone, String email,  String password, String photoURL) async
+  {
+    try
+    {
+      final response = await http.post(Uri.parse('$baseUrl/authentication/sign-up-owner'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'id': id,
+          'name': name,
+          'surname': surname,
+          'phone': phone,
+          'email': email,
+          'password': password,
+          'photoURL': photoURL
+        })
+      );
+
+      if(response.statusCode == 200)
+      {
         return true;
       }
 
       return false;
-    } catch(e) {
+    } catch(e)
+    {
       rethrow;
     }
+
   }
 
-  // Future<bool>signUpOwner
+  Future<bool> signupGuest(int id, String name, String surname, String phone, String email, String password, String photoURL) async
+  {
+    try
+    {
+      final response = await http.post(Uri.parse('$baseUrl/authentication/sign-up-owner'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'id': id,
+          'name': name,
+          'surname': surname,
+          'phone': phone,
+          'email': email,
+          'password': password, 
+          'photoURL': photoURL
 
-  // Future<bool>signUpGuest
+        })
+      );
+
+      if(response.statusCode == 200)
+      {
+        return true;
+      }
+
+      return false;
+    } catch(e)
+    {
+      rethrow;
+    }
+
+  }
 
   Future<void> logout() async{
     await storage.delete(key: 'token');
