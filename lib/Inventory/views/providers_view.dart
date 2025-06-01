@@ -24,7 +24,7 @@ class _ProvidersViewState extends State<ProvidersView> {
   Future<void> _fetchProviders() async {
     final result = await _providerService.getProviders();
     setState(() {
-      _providers = result;
+      _providers = result.where((p) => p.state.toLowerCase() == 'active').toList();
       _loading = false;
     });
   }
@@ -54,7 +54,7 @@ class _ProvidersViewState extends State<ProvidersView> {
 
   void _deleteProvider(Provider provider) async {
     final success = await _providerService.deleteProvider(provider.id);
-    if (success) {
+    if (success == false) {
       _fetchProviders();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
