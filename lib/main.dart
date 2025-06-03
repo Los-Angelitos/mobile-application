@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/views/authscreen.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
+import 'package:sweetmanager/Monitoring/views/reservations_view.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +28,12 @@ class MyHomePage extends StatelessWidget {
           role: 'admin',
           childScreen: const AuthScreen(),
         ),
+        '/bookings': (context) => BaseLayout(
+          role: 'guest',
+          childScreen: const ReservationsView(),
+        ),
+
+
         /*'/dashboard': (context) => const DashboardScreen(),
         // '/subscription': (context) => const SubscriptionPlansView(),
         '/rooms': (context) => const TableRoom(),
