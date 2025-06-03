@@ -33,13 +33,21 @@ class _ProvidersViewState extends State<ProvidersView> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(provider.name),
+        title: Column(
+          children: [
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=1'),
+            ),
+            const SizedBox(height: 12),
+            Text(provider.name, textAlign: TextAlign.center),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('Email: ${provider.email}'),
             Text('Phone: ${provider.phone}'),
-            Text('State: ${provider.state}'),
           ],
         ),
         actions: [
