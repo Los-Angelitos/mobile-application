@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/IAM/views/authscreen.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_account.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,11 +26,16 @@ class MyHomePage extends StatelessWidget {
       routes: {
         '/home': (context) => const HomeView(), // the default app's entry point
         '/profile/account': (context) => AccountPage(),
-        '/profile/info': (context) =>
-            ProfilePage(ownerProfile: null, guestProfile: null),
+        '/profile/info': (context) => ProfilePage(ownerProfile: null, guestProfile: null),
         '/profile/preferences': (context) => UserPreferencesPage(),
         /* '/login': (context) => const LogInScreen(),
         '/dashboard': (context) => const DashboardScreen(),
+        '/home': (context) => const HomeView(), // the default app's entry point 
+        '/signup': (context) =>  BaseLayout(
+          role: 'admin',
+          childScreen: const AuthScreen(),
+        ),
+        /*'/dashboard': (context) => const DashboardScreen(),
         // '/subscription': (context) => const SubscriptionPlansView(),
         '/rooms': (context) => const TableRoom(),
         '/providers': (context) => const ProvidersManagement(),
