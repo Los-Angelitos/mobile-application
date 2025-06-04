@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
+import 'package:sweetmanager/IAM/domain/model/entities/guest_preference.dart';
+import 'package:sweetmanager/IAM/domain/model/queries/update_guest_preferences.dart';
 import 'package:sweetmanager/IAM/domain/model/queries/update_user_profile_request.dart';
 import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import 'package:http/http.dart' as http;
@@ -92,6 +94,70 @@ class UserService extends BaseService {
       return true;
     } catch (e) {
       print('Error updating user profile: $e');
+      return false;
+    }
+  }
+
+  Future<bool> setGuestPreferences(GuestPreferences preferences) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/guest-preferences'),
+        headers: headers,
+        body: json.encode(preferences.toJson()),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to set guest preferences: ${response.reasonPhrase}');
+      }
+
+      return true;
+    } catch (e) {
+      print('Error setting guest preferences: $e');
+      return false;
+    }
+  }
+
+  Future<GuestPreferences?> getGuestPreferences(int guestId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/guest-preferences/guests/$guestId'),
+        headers: headers,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to load guest preferences: ${response.reasonPhrase}');
+      }
+
+      final data = json.decode(response.body);
+      return GuestPreferences.fromJson(data);
+    } catch (e) {
+      print('Error fetching guest preferences: $e');
+      return null;
+    }
+  }
+
+  Future<bool> updateGuestPreferences(
+      EditGuestPreferences preferences, int preferenceId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/guest-preferences/$preferenceId'),
+        headers: headers,
+        body: json.encode(preferences.toJson()),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to update guest preferences: ${response.reasonPhrase}');
+      }
+
+      return true;
+    } catch (e) {
+      print('Error updating guest preferences: $e');
       return false;
     }
   }

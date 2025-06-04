@@ -1,12 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
+import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
+import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
 
 class UserPreferencesPage extends StatefulWidget {
+  final UserService userService = UserService();
+  Guest? guestProfile;
+  Owner? ownerProfile;
+
+  final userId = 72221571; // Replace with actual user ID logic
+  final roleId = 1; // Replace with actual role ID logic
+
   @override
   _GuestProfileScreenState createState() => _GuestProfileScreenState();
 }
 
 class _GuestProfileScreenState extends State<UserPreferencesPage> {
-  String temperature = '24° C';
+  @override
+  void initState() {
+    super.initState();
+    fetchUserProfile();
+  }
+
+  String get userFullName {
+    return widget.ownerProfile?.name ??
+        widget.guestProfile?.name ??
+        'Unknown User';
+  }
+
+  String get userRole {
+    return widget.ownerProfile != null ? 'Owner' : 'Guest';
+  }
+
+  Future<void> fetchUserProfile() async {
+    try {
+      widget.guestProfile =
+          await widget.userService.getGuestProfile(widget.userId);
+      widget.ownerProfile =
+          await widget.userService.getOwnerProfile(widget.userId);
+      setState(() {});
+
+      print(
+          'User profile fetched successfully: ${widget.guestProfile?.toJson()}');
+      print(
+          'Owner profile fetched successfully: ${widget.ownerProfile?.toJson()}');
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
+
+  String temperature = '24';
   String lightType = 'Hot';
   String foodPreferences = 'Meat';
   String drinkPreferences = 'Soda, Water';
@@ -30,7 +76,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
           children: [
             // Header
             Text(
-              'Arian Rodriguez',
+              userFullName,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -49,7 +95,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
 
             // Preference Items
             PreferenceItem(
-              title: 'Ideal Temperature for the room',
+              title: 'Ideal Temperature for the room (C°)',
               value: temperature,
               onEdit: () =>
                   _editPreference('Temperature', temperature, (newValue) {
