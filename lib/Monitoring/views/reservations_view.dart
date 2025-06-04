@@ -359,9 +359,9 @@ class _ReservationsViewState extends State<ReservationsView> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.85, // Cambiado de 0.8 a 0.85 para dar más altura
-        crossAxisSpacing: 12, // Aumentado de 8 a 12
-        mainAxisSpacing: 12, // Aumentado de 8 a 12
+        childAspectRatio: 0.85,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
       itemCount: _reservations.length,
       itemBuilder: (context, index) {
