@@ -63,7 +63,6 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
     }
 
     try {
-      print("mane");
       final response =
           await widget.userService.getGuestPreferences(widget.guestProfile!.id);
 
@@ -98,6 +97,13 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
       return;
     }
 
+    if (temperature <= 0 || temperature > 50 || temperature is String) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a valid temperature')),
+      );
+      return;
+    }
+
     try {
       final updatedPreferences = EditGuestPreferences(
         temperature: temperature,
@@ -118,6 +124,11 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
         await widget.userService
             .updateGuestPreferences(updatedPreferences, currentPreferences.id);
       }
+
+      // Update the local state with the new temperature
+      setState(() {
+        this.temperature = temperature.toString();
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Preferences updated successfully')),

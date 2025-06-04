@@ -143,14 +143,19 @@ class _AccountPageState extends State<AccountPage> {
                     },
                     isSelected: true,
                   ),
-                  buildListTile(context,
-                      icon: Icons.tune,
-                      text: 'My preferences as a Guest', onTap: () {
-                    Navigator.push(
+                  if (widget.roleId == 3)
+                    buildListTile(
                       context,
-                      MaterialPageRoute(builder: (_) => UserPreferencesPage()),
-                    );
-                  }),
+                      icon: Icons.tune,
+                      text: 'My preferences as a Guest',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => UserPreferencesPage()),
+                        );
+                      },
+                    ),
                   buildListTile(
                     context,
                     icon: Icons.schedule,
