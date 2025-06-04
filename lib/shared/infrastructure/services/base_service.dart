@@ -4,5 +4,4 @@ abstract class BaseService {
   final baseUrl = 'http://localhost:5116/api/v1';
 
   final storage = const FlutterSecureStorage();
-
 }
