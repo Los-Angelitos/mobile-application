@@ -65,10 +65,8 @@ class ReservationCard extends StatelessWidget {
 
             const SizedBox(height: 8), // Reducido de 12 a 8
 
-            // Hotel name - texto más compacto
             Flexible( // Usar Flexible para evitar overflow
-              child: Text(
-                booking.hotelName ?? 'Hoteles Decameron Perú',
+              child: Text(booking.hotelName ?? 'Hoteles Decameron Perú',
                 style: const TextStyle(
                   fontSize: 14, // Reducido de 16 a 14
                   fontWeight: FontWeight.bold,
