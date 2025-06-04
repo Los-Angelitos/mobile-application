@@ -83,6 +83,7 @@ class _AccountPageState extends State<AccountPage> {
             const SizedBox(height: 20),
             Card(
               elevation: 4,
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
               ),
@@ -90,7 +91,7 @@ class _AccountPageState extends State<AccountPage> {
               child: Column(
                 children: [
                   Container(
-                    height: 40,
+                    height: 30,
                     decoration: const BoxDecoration(
                       color: Color(0xFF2B61B6),
                       borderRadius: BorderRadius.only(
