@@ -16,8 +16,8 @@ class ProfilePage extends StatefulWidget {
   Guest? guestProfile;
   String? userType;
 
-  final userId = 72221571;
-  final roleId = 1;
+  final userId = 72221573;
+  final roleId = 3;
 
   ProfilePage(
       {super.key, this.ownerProfile, this.guestProfile, this.userType}) {
