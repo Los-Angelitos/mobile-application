@@ -28,14 +28,15 @@ class MyHomePage extends StatelessWidget {
         '/profile/account': (context) => AccountPage(),
         '/profile/info': (context) => ProfilePage(ownerProfile: null, guestProfile: null),
         '/profile/preferences': (context) => UserPreferencesPage(),
-        /* '/login': (context) => const LogInScreen(),
-        '/dashboard': (context) => const DashboardScreen(),
-        '/home': (context) => const HomeView(), // the default app's entry point 
         '/signup': (context) =>  BaseLayout(
           role: 'admin',
           childScreen: const AuthScreen(),
         ),
-        /*'/dashboard': (context) => const DashboardScreen(),
+        /* '/login': (context) => const LogInScreen(),
+        '/dashboard': (context) => const DashboardScreen(),
+        '/home': (context) => const HomeView(), // the default app's entry point 
+        
+        '/dashboard': (context) => const DashboardScreen(),
         // '/subscription': (context) => const SubscriptionPlansView(),
         '/rooms': (context) => const TableRoom(),
         '/providers': (context) => const ProvidersManagement(),
