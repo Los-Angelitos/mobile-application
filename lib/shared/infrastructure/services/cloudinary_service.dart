@@ -10,8 +10,8 @@ class CloudinaryService {
   final String _baseUrl;
 
   CloudinaryService({
-    String cloudName = 'peaceapp-web',
-    String uploadPreset = 'dqawjz3ih',
+    String cloudName = 'dqawjz3ih',
+    String uploadPreset = 'sweetmanager',
   })  : _cloudName = cloudName,
         _uploadPreset = uploadPreset,
         _baseUrl = 'https://api.cloudinary.com/v1_1/$cloudName';
@@ -38,6 +38,8 @@ class CloudinaryService {
         Uri.parse('$_baseUrl/image/upload'),
       );
 
+      print("upload preset: $_uploadPreset");
+      print("cloud name: $_cloudName");
       // Campos obligatorios
       request.fields['upload_preset'] = _uploadPreset;
 
@@ -56,20 +58,24 @@ class CloudinaryService {
           throw CloudinaryException(
               'webImageBytes is required for web platform');
         }
-        file = http.MultipartFile.fromBytes(
-          'file',
-          webImageBytes,
-          filename:
-              publicId ?? 'image_${DateTime.now().millisecondsSinceEpoch}.jpg',
-        );
+        file = http.MultipartFile.fromBytes('file', webImageBytes,
+            filename: publicId ??
+                'image_${DateTime.now().millisecondsSinceEpoch}.jpg');
+        print("manetooo");
       } else {
         file = await http.MultipartFile.fromPath('file', image.path);
       }
 
       request.files.add(file);
 
+      print("URL: ${request.url}");
+      print("Fields: ${request.fields}");
+      print("Files: ${request.files.map((f) => f.filename).toList()}");
+      print("Headers: ${request.headers}");
+
       // Enviar petición
       var response = await request.send();
+      print("response headers : ${response.headers}");
       var responseData = await response.stream.toBytes();
       var result = String.fromCharCodes(responseData);
       var jsonResult = json.decode(result);
@@ -77,6 +83,7 @@ class CloudinaryService {
       if (response.statusCode == 200) {
         return jsonResult['secure_url'] as String;
       } else {
+        print('Error response: $jsonResult');
         throw CloudinaryException(
           'Failed to upload image: ${jsonResult['error']?['message'] ?? 'Unknown error'}',
           statusCode: response.statusCode,

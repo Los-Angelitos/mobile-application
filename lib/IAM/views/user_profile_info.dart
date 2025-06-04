@@ -16,8 +16,8 @@ class ProfilePage extends StatefulWidget {
   Guest? guestProfile;
   String? userType;
 
-  final userId = 72221572;
-  final roleId = 3;
+  final userId = 72221571;
+  final roleId = 1;
 
   ProfilePage(
       {super.key, this.ownerProfile, this.guestProfile, this.userType}) {
@@ -275,13 +275,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       // Usar el servicio generalizado
-      final imageUrl = await cloudinaryService.uploadImage(
-        image,
-        folder: 'user_profiles', // Carpeta opcional
-        webImageBytes: _webImageBytes, // Requerido para web
-        publicId: 'user_${widget.userId}_profile', // ID único opcional
-        tags: ['profile', 'user'], // Tags opcionales
-      );
+      final imageUrl = await cloudinaryService.uploadImage(image,
+          folder: null,
+          webImageBytes: _webImageBytes, // Requerido para web
+          publicId: null,
+          tags: null);
 
       await _updateProfilePhoto(imageUrl);
     } on CloudinaryException catch (e) {
@@ -384,9 +382,10 @@ class _ProfilePageState extends State<ProfilePage> {
     } else {
       // Imagen por defecto o desde URL
       return CircleAvatar(
-        radius: 32,
-        backgroundImage: NetworkImage(userPhotoURL),
-      );
+          radius: 32,
+          backgroundImage: NetworkImage(userPhotoURL.isNotEmpty
+              ? userPhotoURL
+              : 'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg'));
     }
   }
 

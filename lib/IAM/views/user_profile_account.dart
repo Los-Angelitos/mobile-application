@@ -11,8 +11,8 @@ class AccountPage extends StatefulWidget {
   Guest? guestProfile;
   Owner? ownerProfile;
 
-  final userId = 72221572; // Replace with actual user ID logic
-  final roleId = 3; // Replace with actual role ID logic
+  final userId = 72221571; // Replace with actual user ID logic
+  final roleId = 1; // Replace with actual role ID logic
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -101,10 +101,10 @@ class _AccountPageState extends State<AccountPage> {
                   ),
                   const SizedBox(height: 10),
                   CircleAvatar(
-                    radius: 30,
-                    backgroundImage:
-                        NetworkImage(userPhotoURL), // imagen ejemplo
-                  ),
+                      radius: 30,
+                      backgroundImage: NetworkImage(userPhotoURL.isNotEmpty
+                          ? userPhotoURL
+                          : 'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg')),
                   const SizedBox(height: 8),
                   Column(
                     children: [
