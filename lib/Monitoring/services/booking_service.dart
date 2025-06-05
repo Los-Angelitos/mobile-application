@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as https;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/booking.dart';
+import '../models/hotel.dart';
+import '../services/hotel_service.dart';
 import '../../shared/infrastructure/services/base_service.dart';
 
 class BookingService extends BaseService {
+  final HotelService _hotelService = HotelService();
 
   // Método para obtener headers con autenticación
   Future<Map<String, String>> _getAuthHeaders() async {
@@ -56,14 +59,44 @@ class BookingService extends BaseService {
 
         print('Processing ${bookingsJson.length} bookings');
 
+        // Obtener el hotelId del token para enriquecer las reservas
+        final hotelId = await _getHotelIdFromToken();
+        Hotel? hotelInfo;
+
+        if (hotelId != null) {
+          hotelInfo = await _hotelService.getHotelById(hotelId);
+        }
+
         return bookingsJson.map((json) {
           try {
-            return Booking.fromJson(json);
+            final booking = Booking.fromJson(json);
+
+            // Enriquecer con información del hotel si está disponible
+            if (hotelInfo != null) {
+              return Booking(
+                id: booking.id,
+                paymentCustomerId: booking.paymentCustomerId,
+                roomId: booking.roomId,
+                description: booking.description,
+                startDate: booking.startDate,
+                finalDate: booking.finalDate,
+                priceRoom: booking.priceRoom,
+                nightCount: booking.nightCount,
+                amount: booking.amount,
+                state: booking.state,
+                preferenceId: booking.preferenceId,
+                hotelName: hotelInfo.name,
+                hotelLogo: null, // El API no retorna logo, mantener null
+                hotelPhone: hotelInfo.phone, // Asignar el teléfono del hotel
+              );
+            }
+
+            return booking;
           } catch (e) {
             print('Error parsing booking: $e');
             print('Booking data: $json');
             // Crear un booking con valores por defecto para datos faltantes
-            return _createBookingWithDefaults(json);
+            return _createBookingWithDefaults(json, hotelInfo);
           }
         }).toList();
 
@@ -78,8 +111,46 @@ class BookingService extends BaseService {
     }
   }
 
+  // Método para obtener el hotelId del token
+  Future<String?> _getHotelIdFromToken() async {
+    try {
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        print('No token found');
+        return null;
+      }
+
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        print('Invalid JWT format');
+        return null;
+      }
+
+      String base64Payload = parts[1];
+      while (base64Payload.length % 4 != 0) {
+        base64Payload += '=';
+      }
+
+      final payload = json.decode(utf8.decode(base64Decode(base64Payload)));
+
+      // Buscar el hotelId en el claim específico
+      final hotelId = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/locality"];
+
+      if (hotelId != null) {
+        print('Found hotel ID in token: $hotelId');
+        return hotelId.toString();
+      }
+
+      print('Hotel ID not found in token');
+      return null;
+    } catch (e) {
+      print('Error getting hotel ID from token: $e');
+      return null;
+    }
+  }
+
   // Método auxiliar para crear booking con valores por defecto
-  Booking _createBookingWithDefaults(Map<String, dynamic> json) {
+  Booking _createBookingWithDefaults(Map<String, dynamic> json, Hotel? hotelInfo) {
     return Booking(
       id: json['id']?.toString() ?? '',
       paymentCustomerId: json['paymentCustomerId']?.toString() ?? json['customerId']?.toString() ?? '',
@@ -92,7 +163,7 @@ class BookingService extends BaseService {
       amount: _parseDouble(json['amount']) ?? 0.0,
       state: json['state']?.toString()?.toLowerCase() ?? 'inactive',
       preferenceId: json['preferenceId']?.toString() ?? json['preference_id']?.toString(),
-      hotelName: json['hotelName']?.toString() ?? json['hotel_name']?.toString() ?? 'Hotel',
+      hotelName: hotelInfo?.name ?? json['hotelName']?.toString() ?? json['hotel_name']?.toString() ?? 'Hotel',
       hotelLogo: json['hotelLogo']?.toString() ?? json['hotel_logo']?.toString(),
     );
   }
