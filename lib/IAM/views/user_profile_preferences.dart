@@ -1,12 +1,147 @@
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
+import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
+import 'package:sweetmanager/IAM/domain/model/entities/guest_preference.dart';
+import 'package:sweetmanager/IAM/domain/model/queries/update_guest_preferences.dart';
+import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
 
 class UserPreferencesPage extends StatefulWidget {
+  final UserService userService = UserService();
+  Guest? guestProfile;
+  Owner? ownerProfile;
+
+  final userId = 72221573; // Replace with actual user ID logic
+  final roleId = 3; // Replace with actual role ID logic
+
   @override
   _GuestProfileScreenState createState() => _GuestProfileScreenState();
 }
 
 class _GuestProfileScreenState extends State<UserPreferencesPage> {
-  String temperature = '24° C';
+  @override
+  void initState() {
+    super.initState();
+    fetchUserProfile();
+  }
+
+  String get userFullName {
+    return widget.ownerProfile?.name ??
+        widget.guestProfile?.name ??
+        'Unknown User';
+  }
+
+  String get userRole {
+    return widget.ownerProfile != null ? 'Owner' : 'Guest';
+  }
+
+  Future<void> fetchUserProfile() async {
+    try {
+      widget.guestProfile =
+          await widget.userService.getGuestProfile(widget.userId);
+      widget.ownerProfile =
+          await widget.userService.getOwnerProfile(widget.userId);
+      setState(() {});
+
+      await recoverGuestPreferences();
+
+      print(
+          'User profile fetched successfully: ${widget.guestProfile?.toJson()}');
+      print(
+          'Owner profile fetched successfully: ${widget.ownerProfile?.toJson()}');
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$e')),
+      );
+    }
+  }
+
+  Future<GuestPreferences?> recoverGuestPreferences() async {
+    if (widget.guestProfile == null) {
+      print('Guest profile is null, cannot recover preferences');
+      return null;
+    }
+
+    try {
+      final response =
+          await widget.userService.getGuestPreferences(widget.guestProfile!.id);
+
+      if (response != null) {
+        setState(() {
+          temperature = response.temperature.toString();
+        });
+
+        return response;
+      } else {
+        print('No preferences found for guest ID ${widget.guestProfile!.id}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No preferences found')),
+        );
+        return null;
+      }
+    } catch (e) {
+      print('Error recovering guest preferences: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to recover preferences')),
+      );
+      return null;
+    }
+  }
+
+  Future<void> updateGuestPreferences(int temperature) async {
+    if (widget.guestProfile == null) {
+      print('Guest profile is null, cannot update preferences');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Guest profile not found')),
+      );
+      return;
+    }
+
+    if (temperature <= 0 || temperature > 50 || temperature is String) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a valid temperature')),
+      );
+      return;
+    }
+
+    try {
+      final updatedPreferences = EditGuestPreferences(
+        temperature: temperature,
+        guestId: widget.guestProfile!.id,
+      );
+
+      // get the current preferences, if does not exist, create a new one
+      final currentPreferences = await recoverGuestPreferences();
+      if (currentPreferences == null) {
+        // Create new preferences if none exist
+        await widget.userService.setGuestPreferences(GuestPreferences(
+          id: 0, // New preference, ID will be assigned by the backend
+          guestId: widget.guestProfile!.id,
+          temperature: temperature,
+        ));
+      } else {
+        // Update existing preferences
+        await widget.userService
+            .updateGuestPreferences(updatedPreferences, currentPreferences.id);
+      }
+
+      // Update the local state with the new temperature
+      setState(() {
+        this.temperature = temperature.toString();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Preferences updated successfully')),
+      );
+    } catch (e) {
+      print('Error updating guest preferences: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update preferences')),
+      );
+    }
+  }
+
+  String temperature = '';
   String lightType = 'Hot';
   String foodPreferences = 'Meat';
   String drinkPreferences = 'Soda, Water';
@@ -30,7 +165,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
           children: [
             // Header
             Text(
-              'Arian Rodriguez',
+              userFullName,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -39,7 +174,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
             ),
             SizedBox(height: 4),
             Text(
-              'Guest',
+              userRole,
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[600],
@@ -49,7 +184,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
 
             // Preference Items
             PreferenceItem(
-              title: 'Ideal Temperature for the room',
+              title: 'Ideal Temperature for the room (C°)',
               value: temperature,
               onEdit: () =>
                   _editPreference('Temperature', temperature, (newValue) {
@@ -163,7 +298,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
   }
 
   void _editPreference(
-      String title, String currentValue, Function(String) onSave) {
+      String title, String currentValue, Function(String) onSave) async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -171,6 +306,10 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
           title: title,
           currentValue: currentValue,
           onSave: onSave,
+          // Solo pasar la función de actualización si es temperatura
+          onUpdateTemperature: title.contains('Temperature')
+              ? (int temp) async => await updateGuestPreferences(temp)
+              : null,
         );
       },
     );
@@ -265,12 +404,15 @@ class EditPreferenceDialog extends StatefulWidget {
   final String title;
   final String currentValue;
   final Function(String) onSave;
+  final Function(int)?
+      onUpdateTemperature; // Agregar callback para actualizar temperatura
 
   const EditPreferenceDialog({
     Key? key,
     required this.title,
     required this.currentValue,
     required this.onSave,
+    this.onUpdateTemperature, // Parámetro opcional
   }) : super(key: key);
 
   @override
@@ -311,6 +453,9 @@ class _EditPreferenceDialogState extends State<EditPreferenceDialog> {
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
         autofocus: true,
+        keyboardType: widget.title.contains('Temperature')
+            ? TextInputType.number
+            : TextInputType.text, // Teclado numérico para temperatura
       ),
       actions: [
         TextButton(
@@ -321,8 +466,35 @@ class _EditPreferenceDialogState extends State<EditPreferenceDialog> {
           ),
         ),
         ElevatedButton(
-          onPressed: () {
-            widget.onSave(_controller.text);
+          onPressed: () async {
+            final newValue = _controller.text;
+
+            // Actualizar el estado local primero
+            widget.onSave(newValue);
+
+            // Si es temperatura, actualizar en el backend
+            if (widget.title.contains('Temperature') &&
+                widget.onUpdateTemperature != null) {
+              int temperature = int.tryParse(newValue) ?? 0;
+              if (temperature > 0) {
+                await widget.onUpdateTemperature!(temperature);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Please enter a valid temperature'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return; // No cerrar el diálogo si la temperatura no es válida
+              }
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${widget.title} updated successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
             Navigator.of(context).pop();
           },
           child: Text('Save'),

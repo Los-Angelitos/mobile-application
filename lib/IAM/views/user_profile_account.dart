@@ -11,8 +11,8 @@ class AccountPage extends StatefulWidget {
   Guest? guestProfile;
   Owner? ownerProfile;
 
-  final userId = 72221571; // Replace with actual user ID logic
-  final roleId = 1; // Replace with actual role ID logic
+  final userId = 72221573; // Replace with actual user ID logic
+  final roleId = 3; // Replace with actual role ID logic
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -83,6 +83,7 @@ class _AccountPageState extends State<AccountPage> {
             const SizedBox(height: 20),
             Card(
               elevation: 4,
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
               ),
@@ -90,7 +91,7 @@ class _AccountPageState extends State<AccountPage> {
               child: Column(
                 children: [
                   Container(
-                    height: 40,
+                    height: 30,
                     decoration: const BoxDecoration(
                       color: Color(0xFF2B61B6),
                       borderRadius: BorderRadius.only(
@@ -143,14 +144,19 @@ class _AccountPageState extends State<AccountPage> {
                     },
                     isSelected: true,
                   ),
-                  buildListTile(context,
-                      icon: Icons.tune,
-                      text: 'My preferences as a Guest', onTap: () {
-                    Navigator.push(
+                  if (widget.roleId == 3)
+                    buildListTile(
                       context,
-                      MaterialPageRoute(builder: (_) => UserPreferencesPage()),
-                    );
-                  }),
+                      icon: Icons.tune,
+                      text: 'My preferences as a Guest',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => UserPreferencesPage()),
+                        );
+                      },
+                    ),
                   buildListTile(
                     context,
                     icon: Icons.schedule,
