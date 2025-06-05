@@ -37,9 +37,9 @@ class MyHomePage extends StatelessWidget {
         '/bookings': (context) => BaseLayout(
           role: 'guest',
           childScreen: const ReservationsView(),
-        ),
+        )
         /*'/dashboard': (context) => const DashboardScreen(),
-        /* '/login': (context) => const LogInScreen(),
+        / '/login': (context) => const LogInScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/home': (context) => const HomeView(), // the default app's entry point 
         // '/subscription': (context) => const SubscriptionPlansView(),
