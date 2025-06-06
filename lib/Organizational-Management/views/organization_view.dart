@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
 import '../services/organization_service.dart';
 import '../widgets/organization_card.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 class OrganizationPage extends StatefulWidget {
   const OrganizationPage({Key? key}) : super(key: key);
@@ -11,18 +14,46 @@ class OrganizationPage extends StatefulWidget {
 
 class _OrganizationPageState extends State<OrganizationPage> {
   final OrganizationApiService _organizationService = OrganizationApiService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Map<String, dynamic>? currentUser;
   bool isLoading = true;
   bool showModal = false;
   String? errorMessage;
   bool hasAuthError = false;
-  String? userRole;
+  String? userRole = '';
 
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _checkSessionAndLoadUser();
+  }
+
+  Future<void> _loadUserRole() async {
+    try {
+      final token = await _storage.read(key: 'token');
+      if (token == null) return;
+
+      final parts = token.split('.');
+      if (parts.length != 3) return;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = json.decode(decoded);
+
+      final role = payloadMap['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']?.toString();
+
+      setState(() {
+        userRole = role ?? 'ROLE_GUEST';
+      });
+    } catch (e) {
+      print('Error loading user role: $e');
+      setState(() {
+        userRole = 'ROLE_GUEST';
+      });
+    }
   }
 
   Future<void> _checkSessionAndLoadUser() async {
@@ -39,8 +70,10 @@ class _OrganizationPageState extends State<OrganizationPage> {
         return;
       }
 
-      // Extraer el rol del token
-      userRole = await _organizationService.getUserRoleFromToken();
+      // Extraer el rol del token si no se ha cargado aún
+      if (userRole == null || userRole!.isEmpty) {
+        userRole = await _organizationService.getUserRoleFromToken();
+      }
 
       await _loadCurrentUser();
     } catch (e) {
@@ -137,10 +170,8 @@ class _OrganizationPageState extends State<OrganizationPage> {
   }
 
   void _navigateToLogin() {
-    // Aquí debes implementar la navegación a tu pantalla de login
-    // Por ejemplo:
-    // Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    print('Navigate to login screen');
+    // Navegar a la pantalla de login
+    Navigator.pushNamed(context, '/home');
   }
 
   void _showEditUserModal() {
@@ -213,45 +244,82 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: const Text(
-          'Organization',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 18,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black87,
-        actions: [
-          IconButton(
-            onPressed: _refreshUser,
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh',
+    return BaseLayout(
+      role: userRole,
+      childScreen: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
+    return Container(
+      color: const Color(0xFFF8F9FA),
+      child: Column(
+        children: [
+          // Header personalizado (reemplaza el AppBar anterior)
+          _buildCustomHeader(),
+          // Contenido principal
+          Expanded(
+            child: SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: Column(
+                  children: [
+                    // Header
+                    _buildHeader(),
+                    const SizedBox(height: 30),
+
+                    // Content
+                    if (hasAuthError)
+                      _buildErrorState()
+                    else
+                      _buildUserProfile(),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(),
-              const SizedBox(height: 30),
+    );
+  }
 
-              // Content
-              if (hasAuthError)
-                _buildErrorState()
-              else
-                _buildUserProfile(),
-            ],
+  Widget _buildCustomHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-        ),
+        ],
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Organization',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: _refreshUser,
+            icon: const Icon(Icons.refresh_rounded, color: Colors.black),
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
     );
   }
@@ -290,11 +358,11 @@ class _OrganizationPageState extends State<OrganizationPage> {
             ),
           ),
           const SizedBox(width: 16),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Royal Decameron Punta Sal',
                   style: TextStyle(
                     fontSize: 20,
@@ -302,8 +370,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
                     color: Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 4),
-
+                SizedBox(height: 4),
               ],
             ),
           ),
@@ -536,7 +603,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
     return Column(
       children: [
-        // Profile Card - Usando el widget GuestCard actualizado
+        // Profile Card - Usando el widget UserCard actualizado
         UserCard(
           userData: currentUser!,
           userRole: userRole,
@@ -553,7 +620,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
         userData: user,
         userRole: userRole,
         onClose: () => Navigator.of(context).pop(),
-
       ),
     );
   }
