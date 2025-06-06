@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
 import 'package:sweetmanager/Monitoring/models/room.dart';
 import 'package:sweetmanager/Monitoring/services/room_service.dart';
 import 'package:sweetmanager/Monitoring/widgets/room_card.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import '../models/hotel.dart';
 import '../services/hotel_service.dart';
 
@@ -15,6 +18,7 @@ class RoomsView extends StatefulWidget {
 class _RoomsViewState extends State<RoomsView> {
   final RoomService _roomService = RoomService();
   final HotelService _hotelService = HotelService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   List<Room> _rooms = [];
   Hotel? _hotel;
@@ -26,6 +30,7 @@ class _RoomsViewState extends State<RoomsView> {
   bool _isUpdatingState = false;
   Room? _selectedRoom;
   String _newState = 'Disponible';
+  String userRole = '';
 
   final TextEditingController _roomNumberController = TextEditingController();
   int _selectedRoomTypeId = 1;
@@ -49,6 +54,7 @@ class _RoomsViewState extends State<RoomsView> {
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _loadInitialData();
   }
 
@@ -56,6 +62,32 @@ class _RoomsViewState extends State<RoomsView> {
   void dispose() {
     _roomNumberController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUserRole() async {
+    try {
+      final token = await _storage.read(key: 'token');
+      if (token == null) return;
+
+      final parts = token.split('.');
+      if (parts.length != 3) return;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = json.decode(decoded);
+
+      final role = payloadMap['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']?.toString();
+
+      setState(() {
+        userRole = role ?? 'ROLE_ADMIN';
+      });
+    } catch (e) {
+      print('Error loading user role: $e');
+      setState(() {
+        userRole = 'ROLE_ADMIN';
+      });
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -327,6 +359,13 @@ class _RoomsViewState extends State<RoomsView> {
 
   @override
   Widget build(BuildContext context) {
+    return BaseLayout(
+      role: userRole,
+      childScreen: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       body: Stack(
         children: [
