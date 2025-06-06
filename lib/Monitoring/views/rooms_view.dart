@@ -80,12 +80,12 @@ class _RoomsViewState extends State<RoomsView> {
       final role = payloadMap['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']?.toString();
 
       setState(() {
-        userRole = role ?? 'ROLE_ADMIN';
+        userRole = role ?? 'ROLE_OWNER';
       });
     } catch (e) {
       print('Error loading user role: $e');
       setState(() {
-        userRole = 'ROLE_ADMIN';
+        userRole = 'ROLE_OWNER';
       });
     }
   }
