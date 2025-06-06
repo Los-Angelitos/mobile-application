@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import '../models/hotel.dart';
 import '../services/hotel_service.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 class GuestReservationView extends StatefulWidget {
   const GuestReservationView({Key? key}) : super(key: key);
@@ -18,11 +19,39 @@ class _GuestReservationViewState extends State<GuestReservationView> {
   Hotel? hotel;
   bool isLoading = true;
   String? error;
+  String userRole = '';
 
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _loadHotelData();
+  }
+
+  Future<void> _loadUserRole() async {
+    try {
+      final token = await _storage.read(key: 'token');
+      if (token == null) return;
+
+      final parts = token.split('.');
+      if (parts.length != 3) return;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = json.decode(decoded);
+
+      final role = payloadMap['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']?.toString();
+
+      setState(() {
+        userRole = role ?? 'ROLE_GUEST';
+      });
+    } catch (e) {
+      print('Error loading user role: $e');
+      setState(() {
+        userRole = 'ROLE_GUEST';
+      });
+    }
   }
 
   Future<String?> _getHotelIdFromToken() async {
@@ -105,45 +134,79 @@ class _GuestReservationViewState extends State<GuestReservationView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          hotel?.name ?? 'Hotel Details',
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+    return BaseLayout(
+      role: userRole,
+      childScreen: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          // Header personalizado (reemplaza el AppBar anterior)
+          _buildCustomHeader(),
+          // Contenido principal
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : error != null
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error: $error'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadHotelData,
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            )
+                : hotel == null
+                ? const Center(child: Text('Hotel no encontrado'))
+                : _buildHotelContent(),
           ),
-        ),
+        ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-          ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Error: $error'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadHotelData,
-              child: const Text('Reintentar'),
+    );
+  }
+
+  Widget _buildCustomHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            hotel?.name ?? 'Hotel Details',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
-      )
-          : hotel == null
-          ? const Center(child: Text('Hotel no encontrado'))
-          : _buildHotelContent(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -185,14 +248,12 @@ class _GuestReservationViewState extends State<GuestReservationView> {
 
                 const SizedBox(height: 20),
 
-                const SizedBox(height: 20),
-
-                // 5. About This Place
+                // 4. About This Place
                 _buildAboutSection(),
 
                 const SizedBox(height: 20),
 
-                // 6. Amenities/Services
+                // 5. Amenities/Services
                 _buildAmenitiesSection(),
               ],
             ),
@@ -408,32 +469,6 @@ class _GuestReservationViewState extends State<GuestReservationView> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildBookingButton() {
-    return Container(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          _showBookingDialog();
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        child: const Text(
-          'Quote your next booking',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-      ),
     );
   }
 
