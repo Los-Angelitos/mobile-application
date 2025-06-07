@@ -4,7 +4,6 @@ class EditUserProfileRequest {
   final String? phone;
   final String? email;
   final String? state;
-  final int? roleId;
   final String? photoURL;
 
   EditUserProfileRequest({
@@ -13,7 +12,6 @@ class EditUserProfileRequest {
     this.phone,
     this.email,
     this.state,
-    this.roleId,
     this.photoURL,
   });
 
@@ -24,7 +22,6 @@ class EditUserProfileRequest {
       'phone': phone,
       'email': email,
       'state': state,
-      'roleId': roleId,
       'photoURL': photoURL,
     };
   }

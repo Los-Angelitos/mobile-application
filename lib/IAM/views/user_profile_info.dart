@@ -9,15 +9,13 @@ import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
 import 'package:sweetmanager/IAM/domain/model/queries/update_user_profile_request.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
+import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 import 'package:sweetmanager/shared/infrastructure/services/cloudinary_service.dart';
 
 class ProfilePage extends StatefulWidget {
   Owner? ownerProfile;
   Guest? guestProfile;
   String? userType;
-
-  final userId = 72221573;
-  final roleId = 3;
 
   ProfilePage(
       {super.key, this.ownerProfile, this.guestProfile, this.userType}) {
@@ -90,8 +88,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _loadUserData() async {
     if (widget.guestProfile == null && widget.ownerProfile == null) {
       try {
-        widget.guestProfile = await userService.getGuestProfile(widget.userId);
-        widget.ownerProfile = await userService.getOwnerProfile(widget.userId);
+        widget.guestProfile = await userService.getGuestProfile();
+        widget.ownerProfile = await userService.getOwnerProfile();
 
         if (widget.guestProfile != null) {
           widget.userType = 'Guest';
@@ -314,15 +312,10 @@ class _ProfilePageState extends State<ProfilePage> {
         state: (widget.userType == 'Owner')
             ? widget.ownerProfile?.state
             : widget.guestProfile?.state,
-        roleId: widget.roleId,
         photoURL: newPhotoURL,
       );
 
-      final success = await userService.updateUserProfile(
-        request,
-        widget.userId,
-        widget.roleId,
-      );
+      final success = await userService.updateUserProfile(request);
 
       if (success) {
         setState(() {});
@@ -421,15 +414,10 @@ class _ProfilePageState extends State<ProfilePage> {
         state: (widget.userType == 'Owner')
             ? widget.ownerProfile?.state
             : widget.guestProfile?.state,
-        roleId: widget.roleId,
         photoURL: _userData['photoURL'],
       );
 
-      final success = await userService.updateUserProfile(
-        request,
-        widget.userId,
-        widget.roleId,
-      );
+      final success = await userService.updateUserProfile(request);
 
       if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
