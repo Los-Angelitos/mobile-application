@@ -10,9 +10,6 @@ class UserPreferencesPage extends StatefulWidget {
   Guest? guestProfile;
   Owner? ownerProfile;
 
-  final userId = 72221573; // Replace with actual user ID logic
-  final roleId = 3; // Replace with actual role ID logic
-
   @override
   _GuestProfileScreenState createState() => _GuestProfileScreenState();
 }
@@ -36,10 +33,8 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
 
   Future<void> fetchUserProfile() async {
     try {
-      widget.guestProfile =
-          await widget.userService.getGuestProfile(widget.userId);
-      widget.ownerProfile =
-          await widget.userService.getOwnerProfile(widget.userId);
+      widget.guestProfile = await widget.userService.getGuestProfile();
+      widget.ownerProfile = await widget.userService.getOwnerProfile();
       setState(() {});
 
       await recoverGuestPreferences();
@@ -63,8 +58,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
     }
 
     try {
-      final response =
-          await widget.userService.getGuestPreferences(widget.guestProfile!.id);
+      final response = await widget.userService.getGuestPreferences();
 
       if (response != null) {
         setState(() {
