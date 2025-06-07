@@ -4,34 +4,36 @@ import 'package:sweetmanager/IAM/views/home.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_account.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
+import 'package:sweetmanager/Monitoring/views/guest_reservation.dart';
+import 'package:sweetmanager/Monitoring/views/rooms_view.dart';
+import 'package:sweetmanager/Organizational-Management/views/organization_view.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import 'package:sweetmanager/Monitoring/views/reservations_view.dart';
-
 import 'Inventory/views/providers_view.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  runApp(const MyHomePage());
+  runApp(const MyApp());
 }
 
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sweet Manager',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const HomeView(),
       initialRoute: '/home',
       routes: {
-        '/home': (context) => const HomeView(), // the default app's entry point
+        '/home': (context) => const HomeView(),
         '/profile/account': (context) => AccountPage(),
         '/profile/info': (context) => ProfilePage(ownerProfile: null, guestProfile: null),
         '/profile/preferences': (context) => UserPreferencesPage(),
+        '/guest-reservation': (context) => const GuestReservationView(),
+        '/reservations': (context) => const ReservationsView(),
+        '/rooms': (context) => const RoomsView(),
+        '/organization': (context) => const OrganizationPage(),
         '/signup': (context) => AuthScreen(),
         '/providers': (context) => const ProvidersView(),
         '/bookings': (context) => BaseLayout(
@@ -65,3 +67,4 @@ class MyHomePage extends StatelessWidget {
     );
   }
 }
+

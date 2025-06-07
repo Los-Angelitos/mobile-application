@@ -1,10 +1,12 @@
 // views/reservations_view.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import '../models/booking.dart';
 import '../services/booking_service.dart';
 import '../widgets/reservation_card.dart';
 import '../../IAM/infrastructure/auth/auth_service.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 class ReservationsView extends StatefulWidget {
   const ReservationsView({Key? key}) : super(key: key);
@@ -16,15 +18,44 @@ class ReservationsView extends StatefulWidget {
 class _ReservationsViewState extends State<ReservationsView> {
   final BookingService _bookingService = BookingService();
   final AuthService _authService = AuthService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   List<Booking> _reservations = [];
   bool _isLoading = false;
   String? _error;
+  String userRole = '';
 
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _loadReservations();
+  }
+
+  Future<void> _loadUserRole() async {
+    try {
+      final token = await _storage.read(key: 'token');
+      if (token == null) return;
+
+      final parts = token.split('.');
+      if (parts.length != 3) return;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = json.decode(decoded);
+
+      final role = payloadMap['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']?.toString();
+
+      setState(() {
+        userRole = role ?? 'ROLE_GUEST';
+      });
+    } catch (e) {
+      print('Error loading user role: $e');
+      setState(() {
+        userRole = 'ROLE_GUEST';
+      });
+    }
   }
 
   Future<void> _loadReservations() async {
@@ -234,6 +265,13 @@ class _ReservationsViewState extends State<ReservationsView> {
 
   @override
   Widget build(BuildContext context) {
+    return BaseLayout(
+      role: userRole,
+      childScreen: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Column(
       children: [
         // Title section
@@ -270,14 +308,14 @@ class _ReservationsViewState extends State<ReservationsView> {
         Expanded(
           child: Container(
             color: Colors.grey[50],
-            child: _buildContent(),
+            child: _buildReservationsContent(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildReservationsContent() {
     if (_isLoading) {
       return const Center(
         child: Column(

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
 import 'package:sweetmanager/Monitoring/models/room.dart';
 import 'package:sweetmanager/Monitoring/services/room_service.dart';
 import 'package:sweetmanager/Monitoring/widgets/room_card.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
+import '../models/hotel.dart';
+import '../services/hotel_service.dart';
 
 class RoomsView extends StatefulWidget {
   const RoomsView({super.key});
@@ -12,8 +17,11 @@ class RoomsView extends StatefulWidget {
 
 class _RoomsViewState extends State<RoomsView> {
   final RoomService _roomService = RoomService();
+  final HotelService _hotelService = HotelService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   List<Room> _rooms = [];
+  Hotel? _hotel;
   bool _isLoading = false;
   String? _error;
   bool _showAddRoomModal = false;
@@ -22,6 +30,7 @@ class _RoomsViewState extends State<RoomsView> {
   bool _isUpdatingState = false;
   Room? _selectedRoom;
   String _newState = 'Disponible';
+  String userRole = '';
 
   final TextEditingController _roomNumberController = TextEditingController();
   int _selectedRoomTypeId = 1;
@@ -45,13 +54,104 @@ class _RoomsViewState extends State<RoomsView> {
   @override
   void initState() {
     super.initState();
-    _loadRooms();
+    _loadUserRole();
+    _loadInitialData();
   }
 
   @override
   void dispose() {
     _roomNumberController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUserRole() async {
+    try {
+      final token = await _storage.read(key: 'token');
+      if (token == null) return;
+
+      final parts = token.split('.');
+      if (parts.length != 3) return;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final payloadMap = json.decode(decoded);
+
+      final role = payloadMap['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']?.toString();
+
+      setState(() {
+        userRole = role ?? 'ROLE_OWNER';
+      });
+    } catch (e) {
+      print('Error loading user role: $e');
+      setState(() {
+        userRole = 'ROLE_OWNER';
+      });
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Cargar habitaciones y hotel en paralelo
+      final futures = await Future.wait([
+        _roomService.getRoomsByHotel(),
+        _loadHotelInfo(),
+      ]);
+
+      final rooms = futures[0] as List<Room>;
+
+      setState(() {
+        _rooms = rooms;
+        _isLoading = false;
+      });
+
+      if (rooms.isEmpty) {
+        setState(() {
+          _error = 'No se encontraron habitaciones para este hotel';
+        });
+      }
+
+    } catch (error) {
+      setState(() {
+        _isLoading = false;
+        if (error.toString().contains('token') ||
+            error.toString().contains('autenticación')) {
+          _error = 'Problema de autenticación. Por favor, inicia sesión nuevamente.';
+        } else if (error.toString().contains('401')) {
+          _error = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+        } else if (error.toString().contains('403')) {
+          _error = 'No tienes permisos para ver las habitaciones de este hotel.';
+        } else if (error.toString().contains('404')) {
+          _error = 'El servicio de habitaciones no está disponible.';
+        } else if (error.toString().contains('500')) {
+          _error = 'Error del servidor. Por favor, intenta más tarde.';
+        } else {
+          _error = 'Error al cargar las habitaciones: ${error.toString()}';
+        }
+      });
+    }
+  }
+
+  Future<Hotel?> _loadHotelInfo() async {
+    try {
+      // Obtener hotelId del token
+      final hotelId = await _roomService.getHotelIdFromToken();
+      if (hotelId != null) {
+        final hotel = await _hotelService.getHotelById(hotelId.toString());
+        setState(() {
+          _hotel = hotel;
+        });
+        return hotel;
+      }
+    } catch (e) {
+      print('Error loading hotel info: $e');
+    }
+    return null;
   }
 
   Future<void> _loadRooms() async {
@@ -147,7 +247,6 @@ class _RoomsViewState extends State<RoomsView> {
     }
   }
 
-  // MÉTODO CORREGIDO: Manejo mejorado del cambio de estado
   Future<void> _updateRoomState() async {
     if (_selectedRoom == null || _newState.isEmpty) return;
 
@@ -156,10 +255,8 @@ class _RoomsViewState extends State<RoomsView> {
     });
 
     try {
-      // Intentar actualizar en el servidor
       await _roomService.updateRoomState(_selectedRoom!.id, _newState);
 
-      // Actualización OPTIMISTA: Actualizar inmediatamente en la UI
       setState(() {
         final roomIndex = _rooms.indexWhere((r) => r.id == _selectedRoom!.id);
         if (roomIndex != -1) {
@@ -176,21 +273,12 @@ class _RoomsViewState extends State<RoomsView> {
         }
       });
 
-      // CERRAR MODAL INMEDIATAMENTE después de la actualización exitosa
       _closeStateModal();
-
-      // Mostrar mensaje de éxito
       _showSuccessSnackBar('Estado actualizado exitosamente');
-
-      // Opcional: Recargar datos del servidor en segundo plano para sincronizar
-      // pero sin bloquear la UI ni mostrar indicadores de carga
       _refreshDataSilently();
 
     } catch (error) {
-      // Solo mostrar error si realmente falla
       _showErrorSnackBar('No se pudo actualizar el estado');
-
-      // Cerrar modal incluso si hay error para evitar que se quede abierto
       _closeStateModal();
     } finally {
       setState(() {
@@ -199,7 +287,6 @@ class _RoomsViewState extends State<RoomsView> {
     }
   }
 
-  // NUEVO MÉTODO: Recarga silenciosa de datos
   Future<void> _refreshDataSilently() async {
     try {
       final rooms = await _roomService.getRoomsByHotel();
@@ -207,7 +294,6 @@ class _RoomsViewState extends State<RoomsView> {
         _rooms = rooms;
       });
     } catch (e) {
-      // Error silencioso - no mostrar nada al usuario
       print('Error en recarga silenciosa: $e');
     }
   }
@@ -236,37 +322,36 @@ class _RoomsViewState extends State<RoomsView> {
     });
   }
 
-  // MÉTODO CORREGIDO: Cierre limpio del modal
   void _closeStateModal() {
     setState(() {
       _showStateModal = false;
       _selectedRoom = null;
       _isUpdatingState = false;
-      _newState = 'Disponible'; // Reset del estado
+      _newState = 'Disponible';
     });
   }
 
   void _showSuccessSnackBar(String message) {
-    if (mounted) { // Verificar que el widget esté montado
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2), // Reducido a 2 segundos
-          behavior: SnackBarBehavior.floating, // Floating para mejor UX
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
   }
 
   void _showErrorSnackBar(String message) {
-    if (mounted) { // Verificar que el widget esté montado
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating, // Floating para mejor UX
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -274,43 +359,44 @@ class _RoomsViewState extends State<RoomsView> {
 
   @override
   Widget build(BuildContext context) {
+    return BaseLayout(
+      role: userRole,
+      childScreen: _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
     return Scaffold(
       body: Stack(
         children: [
           Column(
             children: [
-              // Header personalizado
+              // Header con nombre del hotel
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    // Título centrado
-                    const Expanded(
-                      child: Center(
-                        child: Text(
-                          'Gestión de Habitaciones',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                    // Nombre del hotel
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _hotel?.name ?? 'Cargando...',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
                     ),
-                    // Acciones a la derecha
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.refresh, color: Colors.black87),
-                          onPressed: _loadRooms,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add, color: Colors.black87),
-                          onPressed: _openAddRoomModal,
-                        ),
-                      ],
+                    const SizedBox(height: 8),
+                    // Botón de refresh en la esquina
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        icon: const Icon(Icons.refresh, color: Colors.black87),
+                        onPressed: _loadInitialData,
+                      ),
                     ),
                   ],
                 ),
@@ -343,13 +429,48 @@ class _RoomsViewState extends State<RoomsView> {
                 ),
               ),
 
+              // Grid de habitaciones
               Expanded(
                 child: _buildRoomsContent(),
+              ),
+
+              // Botones inferiores como en la imagen
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      spreadRadius: 1,
+                      blurRadius: 5,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+
+                    const SizedBox(width: 16),
+                    // Botón Add
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _openAddRoomModal,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0066CC),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Add'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
 
-          // MODALES CONDICIONALES: Solo mostrar si están activos
+          // Modales
           if (_showAddRoomModal && !_isUpdatingState) _buildAddRoomModal(),
           if (_showStateModal && !_isAddingRoom) _buildStateModal(),
         ],
@@ -389,7 +510,7 @@ class _RoomsViewState extends State<RoomsView> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _loadRooms,
+              onPressed: _loadInitialData,
               child: const Text('Reintentar'),
             ),
           ],
@@ -414,7 +535,7 @@ class _RoomsViewState extends State<RoomsView> {
             ),
             SizedBox(height: 8),
             Text(
-              'Agrega tu primera habitación usando el botón +',
+              'Agrega tu primera habitación usando el botón Add',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],

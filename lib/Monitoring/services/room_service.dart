@@ -24,7 +24,8 @@ class RoomService extends BaseService {
     }
   }
 
-  Future<int?> _getHotelIdFromToken() async {
+  // MÉTODO PÚBLICO: Cambiado de privado a público para acceso desde RoomsView
+  Future<int?> getHotelIdFromToken() async {
     try {
       final token = await _getValidToken();
       if (token == null) {
@@ -79,7 +80,7 @@ class RoomService extends BaseService {
         throw Exception('No se encontró token de autenticación válido');
       }
 
-      final hotelId = await _getHotelIdFromToken();
+      final hotelId = await getHotelIdFromToken(); // Usando el método público
       if (hotelId == null) {
         throw Exception('No se pudo obtener el ID del hotel del token');
       }
@@ -120,7 +121,7 @@ class RoomService extends BaseService {
 
   Future<Room> createRoom(CreateRoomRequest request) async {
     try {
-      final hotelId = await _getHotelIdFromToken();
+      final hotelId = await getHotelIdFromToken(); // Usando el método público
       if (hotelId == null) {
         throw Exception('Hotel ID not found in token');
       }
@@ -173,18 +174,24 @@ class RoomService extends BaseService {
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final createdRoom = Room(
-          id: DateTime.now().millisecondsSinceEpoch,
-          number: request.roomNumber ?? request.number ?? request.name ?? 'Nueva habitación',
-          guest: '',
-          checkIn: '',
-          checkOut: '',
-          available: request.state == 'Disponible',
-          typeRoomId: request.typeRoomId,
-          state: request.state,
-        );
+        final responseData = jsonDecode(response.body);
 
-        return createdRoom;
+        // Intentar crear el Room desde la respuesta del servidor
+        try {
+          return Room.fromJson(responseData);
+        } catch (e) {
+          // Si falla, crear un Room manual
+          return Room(
+            id: DateTime.now().millisecondsSinceEpoch,
+            number: request.roomNumber ?? request.number ?? request.name ?? 'Nueva habitación',
+            guest: '',
+            checkIn: '',
+            checkOut: '',
+            available: request.state == 'Disponible',
+            typeRoomId: request.typeRoomId,
+            state: request.state,
+          );
+        }
       } else {
         _handleHttpError(response);
         throw Exception('Error al crear habitación');
@@ -194,90 +201,85 @@ class RoomService extends BaseService {
       if (error is Exception) {
         rethrow;
       } else {
-        throw Exception('Error creando habitación: $error');
+        throw Exception('Error inesperado al crear habitación: $error');
       }
     }
   }
 
-  // MÉTODO CORREGIDO: Mejor manejo de la respuesta del servidor
-  Future<Room> updateRoomState(int roomId, String state) async {
+  Future<Room> updateRoomState(int roomId, String newState) async {
     try {
-      final request = UpdateRoomStateRequest(id: roomId, state: state);
+      final token = await _getValidToken();
+      if (token == null) {
+        throw Exception('No se encontró token de autenticación válido');
+      }
 
       final response = await http.put(
-        Uri.parse('$baseUrl/room/update-room-state'),
+        Uri.parse('$baseUrl/room/update-room-state/$roomId'),
         headers: await _getHeaders(),
-        body: jsonEncode(request.toJson()),
+        body: jsonEncode({
+          'state': newState,
+        }),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        // Manejo mejorado de diferentes tipos de respuesta
-        if (response.body.isNotEmpty) {
-          try {
-            final responseData = jsonDecode(response.body);
-
-            // Si la respuesta es un objeto con datos
-            if (responseData is Map<String, dynamic>) {
-              if (responseData.containsKey('data') && responseData['data'] is Map) {
-                return Room.fromJson(responseData['data']);
-              } else if (responseData.containsKey('id')) {
-                // Si la respuesta contiene directamente los datos de la habitación
-                return Room.fromJson(responseData);
-              }
-            }
-          } catch (e) {
-            // Si hay error al parsear JSON, continuamos con la lógica de fallback
-            print('Error parsing response JSON: $e');
-          }
-        }
-
-        // FALLBACK: Crear un objeto Room temporal con los datos conocidos
-        // Esto evita el error y permite que la actualización local funcione
-        return Room(
-          id: roomId,
-          number: 'Habitación $roomId', // Valor temporal
-          guest: '',
-          checkIn: '',
-          checkOut: '',
-          available: state == 'Disponible',
-          typeRoomId: 1, // Valor por defecto
-          state: state,
-        );
-
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return Room.fromJson(responseData);
       } else {
         _handleHttpError(response);
-        throw Exception('Error al actualizar estado de habitación');
+        throw Exception('Error al actualizar estado de la habitación');
       }
 
     } catch (error) {
       if (error is Exception) {
         rethrow;
       } else {
-        throw Exception('Error actualizando estado: $error');
+        throw Exception('Error inesperado al actualizar estado: $error');
+      }
+    }
+  }
+
+  Future<bool> deleteRoom(int roomId) async {
+    try {
+      final token = await _getValidToken();
+      if (token == null) {
+        throw Exception('No se encontró token de autenticación válido');
+      }
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/room/delete-room/$roomId'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return true;
+      } else {
+        _handleHttpError(response);
+        return false;
+      }
+
+    } catch (error) {
+      if (error is Exception) {
+        rethrow;
+      } else {
+        throw Exception('Error inesperado al eliminar habitación: $error');
       }
     }
   }
 
   void _handleHttpError(http.Response response) {
     switch (response.statusCode) {
+      case 400:
+        throw Exception('Solicitud inválida: ${response.body}');
       case 401:
-        throw Exception('Token de autenticación inválido. Por favor, inicia sesión nuevamente.');
+        throw Exception('No autorizado. Token inválido o expirado');
       case 403:
-        throw Exception('No tienes permisos para acceder a esta información.');
+        throw Exception('Acceso prohibido');
       case 404:
-        throw Exception('Endpoint no encontrado. Verifica la URL de la API.');
+        throw Exception('Recurso no encontrado');
       case 500:
-      case 502:
-      case 503:
-        throw Exception('Error del servidor. Por favor, intenta más tarde.');
+        throw Exception('Error interno del servidor');
       default:
-        try {
-          final responseData = jsonDecode(response.body);
-          final message = responseData['message'] ?? 'Error desconocido';
-          throw Exception(message);
-        } catch (e) {
-          throw Exception('Error HTTP ${response.statusCode}: ${response.body}');
-        }
+        throw Exception('Error HTTP ${response.statusCode}: ${response.body}');
     }
   }
 }

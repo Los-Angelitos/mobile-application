@@ -13,6 +13,8 @@ class Booking {
   final String? preferenceId;
   final String? hotelName;
   final String? hotelLogo;
+  final String? hotelPhone;
+
 
   Booking({
     required this.id,
@@ -28,6 +30,7 @@ class Booking {
     this.preferenceId,
     this.hotelName,
     this.hotelLogo,
+    this.hotelPhone,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
