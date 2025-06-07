@@ -3,34 +3,65 @@ import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
 import 'package:sweetmanager/IAM/domain/model/entities/guest_preference.dart';
 import 'package:sweetmanager/IAM/domain/model/queries/update_guest_preferences.dart';
 import 'package:sweetmanager/IAM/domain/model/queries/update_user_profile_request.dart';
+import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class UserService extends BaseService {
-  final tempToken =
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9zaWQiOiI3MjIyMTU3MyIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2hhc2giOiJSc2ptZUlHOGJ0ZE51S0pqa080UWl3PT1WR01jTXhCcWQ0dkd3QU5BY3FwcEpnPT0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJST0xFX0dVRVNUIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbG9jYWxpdHkiOiIwIiwiZXhwIjoxNzQ5MDc4ODA5LCJpc3MiOiJsb2NhbGhvc3QiLCJhdWQiOiJsb2NhbGhvc3QifQ.MeDXuKWiD7pRz4rrOYzLMxchi6Lml2-e_aksFOWeq6Q";
-
   Future<Map<String, String>> _getHeaders({bool requiresAuth = true}) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
     };
 
     if (requiresAuth) {
-      final token = await storage.read(key: 'auth_token');
-      headers['Authorization'] = 'Bearer $tempToken';
+      final token = await storage.read(key: 'token');
+      headers['Authorization'] = 'Bearer $token';
 
       if (token != null) {
-        headers['Authorization'] = 'Bearer $tempToken';
+        headers['Authorization'] = 'Bearer $token';
       }
     }
-
     return headers;
   }
 
-  Future<Owner?> getOwnerProfile(int userId) async {
+  Future<int?> getUserId() async {
+    try {
+      final id = await TokenHelper().getIdentity();
+      if (id == null) {
+        throw Exception('User ID not found in token');
+      }
+
+      print('User ID: $id');
+      return int.parse(id);
+    } catch (e) {
+      print('Error fetching user ID: $e');
+      return null;
+    }
+  }
+
+  Future<int?> getRoleId() async {
+    try {
+      final role = await TokenHelper().getRole();
+      if (role == null) {
+        throw Exception('Role ID not found in token');
+      }
+
+      print('Role ID: $role');
+      return role == "ROLE_OWNER" ? 1 : 3;
+    } catch (e) {
+      print('Error fetching role ID: $e');
+      return null;
+    }
+  }
+
+  Future<Owner?> getOwnerProfile() async {
     try {
       final headers = await _getHeaders();
+      final userId = await getUserId();
+      if (userId == null) {
+        throw Exception('Owner ID is null');
+      }
       print('uri $baseUrl/user/owners/$userId');
 
       final response = await http.get(
@@ -47,12 +78,18 @@ class UserService extends BaseService {
       return Owner.fromJson(data);
     } catch (e) {
       print(e);
+      return null;
     }
   }
 
-  Future<Guest?> getGuestProfile(int userId) async {
+  Future<Guest?> getGuestProfile() async {
     try {
       final headers = await _getHeaders();
+      final userId = await getUserId();
+      if (userId == null) {
+        throw Exception('Guest ID is null');
+      }
+
       final response = await http.get(
         Uri.parse('$baseUrl/user/guests/$userId'),
         headers: headers,
@@ -67,13 +104,20 @@ class UserService extends BaseService {
       return Guest.fromJson(data);
     } catch (e) {
       print(e);
+      return null;
     }
   }
 
-  Future<bool> updateUserProfile(
-      EditUserProfileRequest request, int userId, int roleId) async {
+  Future<bool> updateUserProfile(EditUserProfileRequest request) async {
     try {
       final headers = await _getHeaders();
+      final userId = await getUserId();
+      final roleId = await getRoleId();
+
+      if (userId == null || roleId == null) {
+        throw Exception('User ID or Role ID is null');
+      }
+
       final uri = (roleId == 3)
           ? Uri.parse('$baseUrl/user/guests/$userId')
           : Uri.parse('$baseUrl/user/owners/$userId');
@@ -117,9 +161,13 @@ class UserService extends BaseService {
     }
   }
 
-  Future<GuestPreferences?> getGuestPreferences(int guestId) async {
+  Future<GuestPreferences?> getGuestPreferences() async {
     try {
       final headers = await _getHeaders();
+      final guestId = await getUserId();
+      if (guestId == null) {
+        throw Exception('Guest ID is null');
+      }
       final response = await http.get(
         Uri.parse('$baseUrl/guest-preferences/guests/$guestId'),
         headers: headers,

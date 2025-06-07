@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
+import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 
 class AccountPage extends StatefulWidget {
   AccountPage({super.key});
   final UserService userService = UserService();
   Guest? guestProfile;
   Owner? ownerProfile;
-
-  final userId = 72221573; // Replace with actual user ID logic
-  final roleId = 3; // Replace with actual role ID logic
+  int? roleId;
 
   @override
   State<AccountPage> createState() => _AccountPageState();
@@ -23,6 +23,7 @@ class _AccountPageState extends State<AccountPage> {
   void initState() {
     super.initState();
     fetchUserProfile();
+    getRoleId();
   }
 
   String get userFullName {
@@ -43,10 +44,8 @@ class _AccountPageState extends State<AccountPage> {
 
   Future<void> fetchUserProfile() async {
     try {
-      widget.guestProfile =
-          await widget.userService.getGuestProfile(widget.userId);
-      widget.ownerProfile =
-          await widget.userService.getOwnerProfile(widget.userId);
+      widget.guestProfile = await widget.userService.getGuestProfile();
+      widget.ownerProfile = await widget.userService.getOwnerProfile();
       setState(() {});
 
       print(
@@ -61,11 +60,41 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
+  Future<void> getRoleId() async {
+    try {
+      final roleId = await TokenHelper().getRole();
+      if (roleId == null) {
+        throw Exception('Role ID not found in token');
+      }
+
+      print('Role ID: $roleId');
+      widget.roleId = roleId == "ROLE_OWNER" ? 1 : 3;
+      setState(() {});
+      print('Role ID set to: ${widget.roleId}');
+    } catch (e) {
+      print('Error fetching role ID: $e');
+    }
+  }
+
   void navigateTo(BuildContext context, String routeName) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => PlaceholderPage(title: routeName)),
     );
+  }
+
+  Future<void> logOut() async {
+    final storage = const FlutterSecureStorage();
+    await storage.delete(key: 'token');
+    await storage.delete(key: 'roleId');
+    await storage.delete(key: 'id');
+    await storage.delete(key: 'userId');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Logged out successfully')),
+    );
+
+    Navigator.pushReplacementNamed(context, '/home');
   }
 
   @override
@@ -167,7 +196,7 @@ class _AccountPageState extends State<AccountPage> {
                     context,
                     icon: Icons.logout,
                     text: 'Logout',
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => logOut(),
                     textColor: Colors.red,
                     iconColor: Colors.red,
                   ),
