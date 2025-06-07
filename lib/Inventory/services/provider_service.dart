@@ -4,6 +4,26 @@ import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import '../models/provider.dart';
 
 class ProviderService extends BaseService {
+  Future<List<Provider>> getProvidersByHotelId(int hotelId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/providers/hotel/$hotelId'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => Provider.fromJson(json)).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<List<Provider>> getProviders() async {
     try {
       final response = await http.get(

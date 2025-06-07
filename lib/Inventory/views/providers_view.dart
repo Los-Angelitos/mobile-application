@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import '../models/provider.dart';
 import '../services/provider_service.dart';
 import '../widgets/provider_card.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class ProvidersView extends StatefulWidget {
   const ProvidersView({super.key});
@@ -21,8 +24,28 @@ class _ProvidersViewState extends State<ProvidersView> {
     _fetchProviders();
   }
 
+  Future<int?> getHotelIdFromToken() async {
+    const storage = FlutterSecureStorage();
+    final token = await storage.read(key: 'token');
+
+    if (token == null) return null;
+    final decoded = JwtDecoder.decode(token);
+    final hotelId = decoded['hotelId'];
+
+    return hotelId is int ? hotelId : int.tryParse(hotelId.toString());
+  }
+
   Future<void> _fetchProviders() async {
-    final result = await _providerService.getProviders();
+    final hotelId = await getHotelIdFromToken();
+    if (hotelId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo obtener el hotelId del token')),
+      );
+      setState(() => _loading = false);
+      return;
+    }
+
+    final result = await _providerService.getProvidersByHotelId(hotelId);
     setState(() {
       _providers = result.where((p) => p.state.toLowerCase() == 'active').toList();
       _loading = false;
@@ -73,8 +96,11 @@ class _ProvidersViewState extends State<ProvidersView> {
 
   @override
   Widget build(BuildContext context) {
+    return BaseLayout(role: '', childScreen: getContentBuild(context));
+  }
+
+  Widget getContentBuild(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Providers")),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(

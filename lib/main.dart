@@ -7,6 +7,8 @@ import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import 'package:sweetmanager/Monitoring/views/reservations_view.dart';
 
+import 'Inventory/views/providers_view.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +33,7 @@ class MyHomePage extends StatelessWidget {
         '/profile/info': (context) => ProfilePage(ownerProfile: null, guestProfile: null),
         '/profile/preferences': (context) => UserPreferencesPage(),
         '/signup': (context) => AuthScreen(),
+        '/providers': (context) => const ProvidersView(),
         '/bookings': (context) => BaseLayout(
           role: 'guest',
           childScreen: const ReservationsView(),
