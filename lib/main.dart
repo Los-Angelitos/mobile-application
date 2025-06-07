@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/views/authscreen.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/main_page.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 void main() async {
@@ -17,6 +18,7 @@ class MyHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sweet Manager',
+    
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const HomeView(), 
       initialRoute: '/home',
@@ -26,6 +28,7 @@ class MyHomePage extends StatelessWidget {
           role: 'admin',
           childScreen: const AuthScreen(),
         ),
+        '/main': (context) => HomeScreen(),
         /*'/dashboard': (context) => const DashboardScreen(),
         // '/subscription': (context) => const SubscriptionPlansView(),
         '/rooms': (context) => const TableRoom(),
