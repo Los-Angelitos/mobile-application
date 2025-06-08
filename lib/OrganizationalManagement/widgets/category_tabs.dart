@@ -25,13 +25,19 @@ class CategoryTabs extends StatelessWidget {
           return GestureDetector(
             onTap: () => onTabSelected(index),
             child: Container(
-              margin: EdgeInsets.only(right: 20),
+              margin: EdgeInsets.only(right: 40),
               child: Column(
                 children: [
-                  Icon(
-                    tabs[index].icon,
-                    color: isSelected ? Color(0xFF1976D2) : Colors.grey,
-                    size: 28,
+                  SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: ColorFiltered(
+                      colorFilter: ColorFilter.mode(
+                        isSelected ? Color(0xFF1976D2) : Colors.grey,
+                        BlendMode.srcIn,
+                      ),
+                      child: tabs[index].icon,
+                    ),
                   ),
                   SizedBox(height: 4),
                   Text(
@@ -60,7 +66,7 @@ class CategoryTabs extends StatelessWidget {
 }
 
 class CategoryTab {
-  final IconData icon;
+  final Widget icon;
   final String label;
 
   CategoryTab({required this.icon, required this.label});
