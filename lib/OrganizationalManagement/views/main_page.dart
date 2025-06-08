@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/hotel.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/multimedia.dart';
 import 'package:sweetmanager/OrganizationalManagement/services/hotel_service.dart';
@@ -28,12 +29,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   final List<CategoryTab> categories = [
-    CategoryTab(icon: Icons.star, label: 'Featured'),
-    CategoryTab(icon: Icons.pool, label: 'Resort'),
-    CategoryTab(icon: Icons.apartment, label: 'Hotel'),
-    CategoryTab(icon: Icons.landscape, label: 'Nature'),
-    CategoryTab(icon: Icons.location_city, label: 'City'),
-    CategoryTab(icon: Icons.beach_access, label: 'Beach'),
+    CategoryTab(
+      icon: SvgPicture.asset('assets/icons/trophy_icon.svg', width: 24, height: 24),
+      label: 'Featured'
+    ),
+    CategoryTab(
+      icon: SvgPicture.asset('assets/icons/lake_icon.svg', width: 24, height: 24),
+      label: 'Near a lake'
+    ),
+    CategoryTab(
+      icon: SvgPicture.asset('assets/icons/pool_icon.svg', width: 24, height: 24),
+      label: 'With pool'
+    ),
+    CategoryTab(
+      icon: SvgPicture.asset('assets/icons/beach_icon.svg', width: 24, height: 24),
+      label: 'Near the beach'
+    ),
+    CategoryTab(
+      icon: SvgPicture.asset('assets/icons/rural_icon.svg', width: 24, height: 24),
+      label: 'Rural Hotel'
+    ),
+    CategoryTab(
+      icon: SvgPicture.asset('assets/icons/bed_icon.svg', width: 24, height: 24),
+      label: 'Master Bedroom'
+    ),
   ];
 
   @override
