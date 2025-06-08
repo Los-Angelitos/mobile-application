@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onNotificationTap;
@@ -26,10 +28,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              Icon(
-                Icons.home_work_outlined,
-                color: Colors.white,
-                size: 24,
+              ColorFiltered(
+                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                child: SvgPicture.asset(
+                  'icons/logo.svg',
+                  width: 24,
+                  height: 24,
+                ),
               ),
               SizedBox(width: 8),
               Text(
