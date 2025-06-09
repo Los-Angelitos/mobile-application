@@ -6,6 +6,7 @@ import 'package:sweetmanager/IAM/views/user_profile_account.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 import 'package:sweetmanager/Monitoring/views/guest_reservation.dart';
 import 'package:sweetmanager/Monitoring/views/rooms_view.dart';
+import 'package:sweetmanager/Organizational-Management/views/hotel_overview_view.dart';
 import 'package:sweetmanager/Organizational-Management/views/organization_view.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import 'package:sweetmanager/Monitoring/views/reservations_view.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
         '/organization': (context) => const OrganizationPage(),
         '/signup': (context) => AuthScreen(),
         '/providers': (context) => const ProvidersView(),
+        '/hotel/overview': (context) => const HotelDetailView(),
         '/bookings': (context) => BaseLayout(
           role: 'guest',
           childScreen: const ReservationsView(),
