@@ -63,28 +63,23 @@ class HotelDetailScreen extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(20),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.star, color: Colors.white, size: 16),
-                            SizedBox(width: 4),
-                            Text(
-                              "4.0",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        child: ClipOval(
+                          child: Image.network(
+                            multimediaLogo?.url ??
+                                'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTC49nTeeuObEO_ZI-NpfFx2SaVWvh8_bOw9w&s',
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ],
                   ),
+
                   SizedBox(height: 8),
                   Text(
                     hotel.address,
@@ -111,16 +106,6 @@ class HotelDetailScreen extends StatelessWidget {
                       height: 1.5,
                     ),
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Amenities',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  SizedBox(height: 12),
                   
                   SizedBox(height: 30),
                   Row(
@@ -129,7 +114,7 @@ class HotelDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'S/ 100',
+                            'S/ 200',
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
