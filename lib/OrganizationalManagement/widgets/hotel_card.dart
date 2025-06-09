@@ -5,6 +5,7 @@ import 'package:sweetmanager/OrganizationalManagement/models/multimedia.dart';
 class HotelCard extends StatelessWidget {
   final Hotel hotel;
   final Multimedia? multimedia;
+  final Multimedia? logo;
 
   final VoidCallback onTap;
 
@@ -12,6 +13,7 @@ class HotelCard extends StatelessWidget {
     Key? key,
     required this.hotel,
     required this.multimedia,
+    required this.logo,
     required this.onTap,
   }) : super(key: key);
 
@@ -20,26 +22,21 @@ class HotelCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(12),          
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Expanded(
+              flex: 3,
+            child:
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12), bottom: Radius.circular(12)),
                   child: Image.network(
                     multimedia?.url ?? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTC49nTeeuObEO_ZI-NpfFx2SaVWvh8_bOw9w&s',
                     height: 200,
@@ -48,59 +45,63 @@ class HotelCard extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  bottom: 8,
-                  left: 8,
+                  bottom: 6,
+                  left: 6,
                   child: Container(
-                      width: 55,
-                      height: 55,
+
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2), // cambia el width aquí si deseas
+                        border: Border.all(color: Colors.white, width: 2), 
                       ),
                       child: ClipOval(
                         child: Image.network(
-                          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIQ9WUL_LFf-l4PPaBUyvF37jWLVSYTjwVTg&s',
+                          logo?.url ?? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTC49nTeeuObEO_ZI-NpfFx2SaVWvh8_bOw9w&s',
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Icon(Icons.error, size: 24, color: Colors.red),
                         ),
                       ),
                     ),
                 ),
               ],
             ),
+            ),
+            Expanded(
+              flex: 2,
+              child:
             Padding(
-              padding: EdgeInsets.all(12),
+              padding: EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                //mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     hotel.name,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 4),
                   Text(
                     hotel.address,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 11,
                       color: Colors.grey[600],
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 4),
                   Row(
                     children: [
                       Text(
                         'S/ 200', // acaaaa incorporar el precio del bc reservation
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF1976D2),
                         ),
@@ -108,7 +109,7 @@ class HotelCard extends StatelessWidget {
                       Text(
                         ' per night',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 10,
                           color: Colors.grey[600],
                         ),
                       ),
@@ -116,6 +117,7 @@ class HotelCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
             ),
           ],
         ),
