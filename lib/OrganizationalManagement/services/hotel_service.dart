@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:sweetmanager/OrganizationalManagement/models/hotel.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/multimedia.dart';
@@ -46,23 +47,26 @@ class HotelService extends BaseService {
     }
   
     Future<List<Hotel>> getHotelByCategory(String category) async {
-        try {
+      try {
         final response = await http.get(
-            Uri.parse('$baseUrl/hotels?category=$category'),
-            headers: {
-            'Content-Type': 'application/json'
-            },
-        );
+        Uri.parse('$baseUrl/hotels'),
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      );
 
-        if (response.statusCode == 200) {
-            final List<dynamic> data = jsonDecode(response.body);
-            return data.map((json) => Hotel.fromJson(json)).toList();
-        } else {
-            return [];
-        }
-        } catch (e) {
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data
+            .map((json) => Hotel.fromJson(json))
+            .where((hotel) => hotel.category == category)
+            .toList();
+      } else {
         return [];
-        }
+      }
+      }catch (e) {
+        return [];
+      }
     }
 
   Future<Multimedia?> getMainHotelMultimedia(int hotelId) async {
@@ -124,4 +128,6 @@ class HotelService extends BaseService {
       return [];
     }
   }
+
+  
 }
