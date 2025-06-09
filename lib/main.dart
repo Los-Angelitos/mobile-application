@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/views/authscreen.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/main_page.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_account.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sweet Manager',
+    
       theme: ThemeData(primarySwatch: Colors.blue),
       initialRoute: '/home',
       routes: {
@@ -40,10 +42,11 @@ class MyApp extends StatelessWidget {
           role: 'guest',
           childScreen: const ReservationsView(),
         ),
+        '/main': (context) => HomeScreen(),
+        /*'/dashboard': (context) => const DashboardScreen(),
         // '/dashboard': (context) => const DashboardScreen(),
-        /* '/login': (context) => const LogInScreen(),
+        '/login': (context) => const LogInScreen(),
         '/dashboard': (context) => const DashboardScreen(),
-        '/home': (context) => const HomeView(), // the default app's entry point 
         // '/subscription': (context) => const SubscriptionPlansView(),
         '/rooms': (context) => const TableRoom(),
         '/providers': (context) => const ProvidersManagement(),
