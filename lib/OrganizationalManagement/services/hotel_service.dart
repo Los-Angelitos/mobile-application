@@ -88,7 +88,7 @@ class HotelService extends BaseService {
   Future<Multimedia?> getHotelLogoMultimedia(int hotelId) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/multimedia/logo?hotelId=$hotelId'),
+        Uri.parse('$baseUrl/multimedia/logo?hotel=$hotelId'),
         headers: {
           'Content-Type': 'application/json'
         },
