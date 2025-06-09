@@ -6,12 +6,14 @@ import 'package:sweetmanager/OrganizationalManagement/models/multimedia.dart';
 class HotelDetailScreen extends StatelessWidget {
   final Hotel hotel;
   final Multimedia? multimediaMain;
+  final Multimedia? multimediaLogo;
   final List<Multimedia>? multimediaDetails;
 
   const HotelDetailScreen({
     Key? key,
     required this.hotel,
     required this.multimediaMain,
+    required this.multimediaLogo,
     required this.multimediaDetails,
 
    }) : super(key: key);
