@@ -25,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Hotel> hotels = [];
   List<Hotel> filteredHotels = [];
   Map<int, Multimedia> multimediaList = {};
+  Map<int, Multimedia> logoList = {};
   Map<int, List<Multimedia>> multimediaDetailList = {};
 
 
@@ -54,6 +55,15 @@ class _HomeScreenState extends State<HomeScreen> {
       label: 'Master Bedroom'
     ),
   ];
+  final List<String> categoryValues = [
+    'FEATURED',
+    'NEAR_THE_LAKE',
+    'WITH_A_POOL',
+    'NEAR_THE_BEACH',
+    'RURAL_HOTEL',
+    'SUITE'
+  ];
+
 
   @override
   void initState() {
@@ -66,10 +76,15 @@ class _HomeScreenState extends State<HomeScreen> {
   
     for (var hotel in hotels) {
       Multimedia? multimediaMain = await hotelService.getMainHotelMultimedia(hotel.id);
+      Multimedia? logo = await hotelService.getHotelLogoMultimedia(hotel.id);
+
       List<Multimedia> multimediaDetails = await hotelService.getHotelDetailMultimedia(hotel.id);
 
       if (multimediaMain != null) {
         multimediaList[hotel.id] = multimediaMain;
+      }
+      if (logo != null) {
+        logoList[hotel.id] = logo;
       }
 
       if (multimediaDetails.isNotEmpty) {
@@ -97,13 +112,39 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void onCategorySelected(int index) {
-    setState(() {
-      selectedCategoryIndex = index;
-      // Aquí podrías filtrar los hoteles por categoría
-      // Por ahora solo cambiaremos el estado visual
-    });
+  Future<void> onCategorySelected(int index) async {
+  setState(() {
+    selectedCategoryIndex = index;
+  });
+
+  if (index == 0) {
+    // Featured: cargar todos los hoteles
+    hotels = await hotelService.getHotels();
+  } else {
+    String selectedCategory = categoryValues[index];
+    print('Selected category: $selectedCategory');
+    hotels = await hotelService.getHotelByCategory(selectedCategory);
+    print('Hotels in category $selectedCategory: $hotels');
   }
+
+  // Limpia los datos previos
+  multimediaList.clear();
+  logoList.clear();
+  multimediaDetailList.clear();
+
+  for (var hotel in hotels) {
+    Multimedia? multimediaMain = await hotelService.getMainHotelMultimedia(hotel.id);
+    Multimedia? logo = await hotelService.getHotelLogoMultimedia(hotel.id);
+    List<Multimedia> multimediaDetails = await hotelService.getHotelDetailMultimedia(hotel.id);
+
+    if (multimediaMain != null) multimediaList[hotel.id] = multimediaMain;
+    if (logo != null) logoList[hotel.id] = logo;
+    multimediaDetailList[hotel.id] = multimediaDetails;
+  }
+
+  filteredHotels = hotels;
+  setState(() {});
+}
 
   void onHotelTap(Hotel hotel) {
     Navigator.push(
@@ -111,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(
         builder: (context) => HotelDetailScreen(hotel: hotel, 
           multimediaMain: multimediaList.isNotEmpty ? multimediaList[hotel.id] : null,
+          multimediaLogo: logoList.isNotEmpty ? logoList[hotel.id] : null,
           multimediaDetails: multimediaDetailList.isNotEmpty ? multimediaDetailList[hotel.id] : null,
         ),
       ),
@@ -133,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           CustomSearchBar(
-            hintText: 'What will be your next destiny?',
+            hintText: 'What will be your next destination?',
             controller: searchController,
             onSearch: filterHotels,
           ),
@@ -143,7 +185,14 @@ class _HomeScreenState extends State<HomeScreen> {
             onTabSelected: onCategorySelected,
           ),
           Expanded(
-            child: ListView.builder(
+            child: GridView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.75, // Ajusta la proporción altura/ancho de las cards
+              ),
               itemCount: filteredHotels.length,
               itemBuilder: (context, index) {
                 return HotelCard(
@@ -151,12 +200,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   multimedia: multimediaList.isNotEmpty && index < multimediaList.length
                       ? multimediaList[filteredHotels[index].id]
                       : null,
+                  logo: logoList.isNotEmpty && index < logoList.length
+                      ? logoList[filteredHotels[index].id]
+                      : null,
                   
                   onTap: () => onHotelTap(filteredHotels[index]),
                 );
               },
             ),
           ),
+
         ],
       ),
     );
