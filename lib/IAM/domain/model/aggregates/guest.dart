@@ -5,7 +5,7 @@ class Guest {
 
   final String surname;
 
-  final int phone;
+  final String phone;
 
   final String email;
 
@@ -13,6 +13,36 @@ class Guest {
 
   final String state;
 
-  Guest({required this.id, required this.name, required this.surname, required this.phone, 
-  required this.email, required this.photoURL, required this.state});
+  Guest(
+      {required this.id,
+      required this.name,
+      required this.surname,
+      required this.phone,
+      required this.email,
+      required this.photoURL,
+      required this.state});
+
+  factory Guest.fromJson(Map<String, dynamic> json) {
+    return Guest(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      surname: json['surname'] as String,
+      phone: json['phone'] as String,
+      email: json['email'] as String,
+      photoURL: json['photoURL'] as String,
+      state: json['state'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'surname': surname,
+      'phone': phone,
+      'email': email,
+      'photoURL': photoURL,
+      'state': state,
+    };
+  }
 }

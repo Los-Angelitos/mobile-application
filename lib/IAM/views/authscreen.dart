@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/auth_service.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
+import 'account_type_selection_screen.dart'; // Import la nueva pantalla
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
-
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  // Estado de la vista actual
-  bool _showAccountTypeSelection = false;
-  
-  // Controladores para Login
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _obscurePassword = true;
-  String? _selectedLoginRole; // Nuevo: para selección de rol en login
+  String? _selectedLoginRole;
   
   // Controladores para Sign Up
   final TextEditingController _fullNameController = TextEditingController();
@@ -31,179 +28,107 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
   
-  // Variables para Account Type Selection
-  String? _selectedAccountType;
-  
   bool _isLoginTab = true;
   bool _isLoading = false;
-
-  // Controladores de scroll para las scrollbars
   final ScrollController _loginScrollController = ScrollController();
   final ScrollController _signupScrollController = ScrollController();
 
   @override
   Widget build(BuildContext context) {
+    return BaseLayout(
+      role: '', 
+      childScreen: _buildAuthContent(), 
+    );
+  }
+
+  Widget _buildAuthContent() {
     return Scaffold(
-      backgroundColor: _showAccountTypeSelection ? const Color(0xFF1976D2) : Colors.grey[50],
+      backgroundColor: Colors.grey[50],
       body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 500),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1.0, 0.0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-          child: _showAccountTypeSelection 
-              ? _buildAccountTypeScreen() 
-              : _buildAuthScreen(),
-        ),
+        child: _buildAuthScreen(),
       ),
     );
   }
 
   Widget _buildAuthScreen() {
+    final textStyle = const TextStyle(fontSize: 14, color: Colors.grey);
+    final scrollCtrl = _isLoginTab ? _loginScrollController : _signupScrollController;
+
+    Widget _buildTab(String label, bool isLogin) {
+      final active = _isLoginTab == isLogin;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => _switchTab(isLogin),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: active ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: active
+                  ? const Border(bottom: BorderSide(color: Color(0xFF1976D2), width: 2))
+                  : null,
+            ),
+            child: _isLoading && active
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Color(0xFF1976D2)),
+                    ),
+                  )
+                : Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: active ? const Color(0xFF1976D2) : Colors.grey,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       key: const ValueKey('auth_screen'),
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 40),
-          // Título
-          const Text(
-            'Welcome to Sweet Manager',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1976D2),
-            ),
-          ),
+          const Text('Welcome to Sweet Manager',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFF1976D2))),
           const SizedBox(height: 8),
           Text(
-            _isLoginTab 
+            _isLoginTab
                 ? 'To use the app, please log in or register an account'
                 : 'To use the application, please log in or register an organization',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
+            style: textStyle,
           ),
           const SizedBox(height: 32),
-          
-          // Tabs
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+              boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 3, offset: const Offset(0, 1))],
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _switchTab(true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: _isLoginTab ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: _isLoginTab 
-                            ? const Border(
-                                bottom: BorderSide(
-                                  color: Color(0xFF1976D2),
-                                  width: 2,
-                                ),
-                              )
-                            : null,
-                      ),
-                      child: _isLoading && _isLoginTab
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1976D2)),
-                              ),
-                            )
-                          : Text(
-                              'Log in',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _isLoginTab ? const Color(0xFF1976D2) : Colors.grey,
-                                fontWeight: _isLoginTab ? FontWeight.w600 : FontWeight.normal,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _switchTab(false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: !_isLoginTab ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: !_isLoginTab 
-                            ? const Border(
-                                bottom: BorderSide(
-                                  color: Color(0xFF1976D2),
-                                  width: 2,
-                                ),
-                              )
-                            : null,
-                      ),
-                      child: _isLoading && !_isLoginTab
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1976D2)),
-                              ),
-                            )
-                          : Text(
-                              'Sign up',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: !_isLoginTab ? const Color(0xFF1976D2) : Colors.grey,
-                                fontWeight: !_isLoginTab ? FontWeight.w600 : FontWeight.normal,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: Row(children: [_buildTab('Log in', true), _buildTab('Sign up', false)]),
           ),
-          
           const SizedBox(height: 24),
-          
-          // Contenido con scroll y scrollbar
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               child: Scrollbar(
                 key: ValueKey(_isLoginTab),
-                controller: _isLoginTab ? _loginScrollController : _signupScrollController,
+                controller: scrollCtrl,
                 thumbVisibility: true,
                 trackVisibility: true,
                 thickness: 6,
                 radius: const Radius.circular(3),
                 child: SingleChildScrollView(
-                  controller: _isLoginTab ? _loginScrollController : _signupScrollController,
-                  padding: const EdgeInsets.only(right: 12), // Espacio para la scrollbar
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.only(right: 12),
                   child: _isLoginTab ? _buildLoginForm() : _buildSignUpForm(),
                 ),
               ),
@@ -214,317 +139,17 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildAccountTypeScreen() {
-    return Column(
-      key: const ValueKey('account_type_screen'),
-      children: [
-        // Contenido principal en blanco
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  
-                  // Título "A last step!"
-                  const Text(
-                    'A last step!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1976D2),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Subtítulo
-                  const Text(
-                    'At SweetManager we care about providing the best experience possible.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                      height: 1.4,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Pregunta
-                  const Text(
-                    'Who this account will be for?',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Opción Guest
-                  GestureDetector(
-                    onTap: () => setState(() => _selectedAccountType = 'guest'),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _selectedAccountType == 'guest' 
-                              ? const Color(0xFF1976D2) 
-                              : Colors.grey[300]!,
-                          width: _selectedAccountType == 'guest' ? 2 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Radio<String>(
-                            value: 'guest',
-                            groupValue: _selectedAccountType,
-                            onChanged: (value) => setState(() => _selectedAccountType = value),
-                            activeColor: const Color(0xFF1976D2),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Guest',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'I will use my account to search, book a stay within a hotel.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  // Opción Chief owner
-                  GestureDetector(
-                    onTap: () => setState(() => _selectedAccountType = 'chief_owner'),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _selectedAccountType == 'chief_owner' 
-                              ? const Color(0xFF1976D2) 
-                              : Colors.grey[300]!,
-                          width: _selectedAccountType == 'chief_owner' ? 2 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Radio<String>(
-                            value: 'chief_owner',
-                            groupValue: _selectedAccountType,
-                            onChanged: (value) => setState(() => _selectedAccountType = value),
-                            activeColor: const Color(0xFF1976D2),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Chief owner',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'I will be in charge of all the activities inside my hotel and I will manage what is necessary for my clients.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  const Spacer(),
-                  
-                  // Botón Sign up
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _selectedAccountType != null
-                          ? () async {
-                              final fullName = _fullNameController.text.trim();
-                              print("Full name: $fullName");
-
-                              final nameParts = fullName.split(' ');
-                              final name = nameParts.isNotEmpty ? nameParts[0] : '';
-                              final surname = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-
-                              print("Parsed name: $name, surname: $surname");
-
-                              final email = _signupEmailController.text;
-                              final phone = _phoneController.text;
-                              final password = _signupPasswordController.text;
-                              final accountType = _selectedAccountType!;
-                              final dni = _dniController.text.trim();
-                              final id = int.tryParse(dni);
-                              final photoURL = ''; // Placeholder for photo URL
-
-                              print("Email: $email, Phone: $phone, AccountType: $accountType, DNI: $dni");
-
-                              if (id == null) {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: Text("Error"),
-                                    content: Text("El DNI debe ser un número válido."),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              final authService = AuthService();
-                              bool success = false;
-
-                              try {
-                                if (accountType == 'guest') {
-                                  print("Calling signupGuest...");
-                                  success = await authService.signupGuest(
-                                    id,
-                                    name,
-                                    surname,
-                                    phone,
-                                    email,
-                                    password,
-                                    photoURL,
-                                  );
-                                  print("signupGuest result: $success");
-                                } else if (accountType == 'chief_owner') {
-                                  print("Calling signupOwner...");
-                                  success = await authService.signupOwner(
-                                    id,
-                                    name,
-                                    surname,
-                                    phone,
-                                    email,
-                                    password,
-                                    photoURL
-                                  );
-                                  print("signupOwner result: $success");
-                                }
-                              } catch (e, stack) {
-                                print("Exception during signup: $e");
-                                print("Stack trace: $stack");
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Error'),
-                                    content: Text('Ocurrió un error inesperado: $e'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('OK'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                return;
-                              }
-
-                              if (success) {
-                                print("Signup successful, navigating to /home...");
-                                Navigator.pushNamed(context, '/home');
-                              } else {
-                                print("Signup failed (success = false)");
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Error'),
-                                    content: const Text('Error al registrar usuario'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context),
-                                        child: const Text('OK'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                          }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1976D2),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Sign up',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   void _switchTab(bool isLogin) async {
-    if (_isLoading) return; // Prevenir múltiples clics durante la carga
+    if (_isLoading) return;
     
     setState(() {
       _isLoading = true;
     });
-    
-    // Simular una pequeña carga para hacer la transición más visible
     await Future.delayed(const Duration(milliseconds: 400));
     
     setState(() {
       _isLoginTab = isLogin;
       _isLoading = false;
-      // Resetear selección de rol cuando se cambia de tab
       _selectedLoginRole = null;
     });
   }
@@ -618,22 +243,9 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
           child: Column(
             children: [
-              // Opción Guest
               RadioListTile<String>(
-                title: const Text(
-                  'Guest',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                subtitle: const Text(
-                  'I want to search and book hotel stays',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
+                title: const Text('Guest', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                subtitle: const Text('I want to search and book hotel stays', style: TextStyle(fontSize: 12, color: Colors.grey)),
                 value: 'guest',
                 groupValue: _selectedLoginRole,
                 onChanged: (value) => setState(() => _selectedLoginRole = value),
@@ -641,22 +253,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 dense: true,
               ),
               const Divider(height: 1),
-              // Opción Owner
               RadioListTile<String>(
-                title: const Text(
-                  'Owner',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                subtitle: const Text(
-                  'I want to manage my hotel business',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
+                title: const Text('Owner', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                subtitle: const Text('I want to manage my hotel business', style: TextStyle(fontSize: 12, color: Colors.grey)),
                 value: 'owner',
                 groupValue: _selectedLoginRole,
                 onChanged: (value) => setState(() => _selectedLoginRole = value),
@@ -673,92 +272,13 @@ class _AuthScreenState extends State<AuthScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _selectedLoginRole != null
-    ? () async {
-        final email = _emailController.text.trim();
-        final password = _passwordController.text;
-        final role = _selectedLoginRole!;
-        int roleId = 0;
-
-        print("Login attempt:");
-        print("Email: $email");
-        print("Password: $password"); // ⚠️ Solo para debug, quita esto en producción
-        print("Selected role: $role");
-
-        final authService = AuthService();
-
-        if (role == 'guest') {
-          roleId = 3;
-          print("Mapped role to ID: $roleId (guest)");
-        } else if (role == 'owner') {
-          roleId = 1;
-          print("Mapped role to ID: $roleId (owner)");
-        } else {
-          print("Unknown role: $role");
-        }
-
-        bool success = false;
-
-        try {
-          print("Calling login API...");
-          success = await authService.login(email, password, roleId);
-          print("Login result: $success");
-        } catch (e, stack) {
-          print("Exception during login: $e");
-          print("Stack trace: $stack");
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Error'),
-              content: Text('Ocurrió un error al intentar iniciar sesión: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
-          return;
-        }
-
-        if (success) {
-          print("Login successful, navigating to /home");
-          Navigator.pushNamed(context, '/home');
-        } else {
-          print("Login failed: invalid credentials or server error");
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Error'),
-              content: const Text('Credenciales incorrectas'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                )
-              ],
-            ),
-          );
-        }
-      }
-    : null,
-
+            onPressed: _selectedLoginRole != null ? _handleLogin : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1976D2),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text(
-              'Log in',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
+            child: const Text('Log in', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
           ),
         ),
         
@@ -767,221 +287,163 @@ class _AuthScreenState extends State<AuthScreen> {
         // Forgot password
         Center(
           child: TextButton(
-            onPressed: () {
-              print('Forgot password pressed');
-            },
-            child: const Text(
-              'Forgot my password',
-              style: TextStyle(
-                color: Color(0xFF1976D2),
-                fontSize: 14,
-              ),
-            ),
+            onPressed: () => print('Forgot password pressed'),
+            child: const Text('Forgot my password', style: TextStyle(color: Color(0xFF1976D2), fontSize: 14)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSignUpForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Campo Full name
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: _fullNameController,
-            decoration: const InputDecoration(
-              labelText: 'Full name',
-              labelStyle: TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Campo Email address
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: _signupEmailController,
-            decoration: const InputDecoration(
-              labelText: 'Email address',
-              labelStyle: TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 16),
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final role = _selectedLoginRole!;
+    int roleId = 0;
+    final authService = AuthService();
 
-        // Campo Dni
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: _dniController,
-            decoration: const InputDecoration(
-              labelText: 'Dni',
-              labelStyle: TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Campo Phone number
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: _phoneController,
-            decoration: const InputDecoration(
-              labelText: 'Phone number',
-              labelStyle: TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Campo Password
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: _signupPasswordController,
-            obscureText: _obscureSignupPassword,
-            decoration: InputDecoration(
-              labelText: 'Password',
-              labelStyle: const TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureSignupPassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey,
-                ),
-                onPressed: () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
-              ),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Campo Confirm your password
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: _confirmPasswordController,
-            obscureText: _obscureConfirmPassword,
-            decoration: InputDecoration(
-              labelText: 'Confirm your password',
-              labelStyle: const TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey,
-                ),
-                onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-              ),
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Requisitos de contraseña
-        const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.circle, size: 6, color: Colors.grey),
-                SizedBox(width: 8),
-                Text(
-                  'At least one character in uppercase and lowercase',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.circle, size: 6, color: Colors.grey),
-                SizedBox(width: 8),
-                Text(
-                  'At least a number',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.circle, size: 6, color: Colors.grey),
-                SizedBox(width: 8),
-                Text(
-                  'At least a special character',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-            SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.circle, size: 6, color: Colors.grey),
-                SizedBox(width: 8),
-                Text(
-                  'At least 8 characters',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
+    if (role == 'guest') {
+      roleId = 3;
+    } else if (role == 'owner') {
+      roleId = 1;
+    } else {
+      print("Unknown role: $role");
+    }
+
+    bool success = false;
+
+    try {
+      success = await authService.login(email, password, roleId);
+    } catch (e, stack) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: Text('Ocurrió un error al intentar iniciar sesión: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
             ),
           ],
         ),
-        
+      );
+      return;
+    }
+
+    if (success) {
+      print("Login successful, navigating to /home");
+      Navigator.pushNamed(context, '/home');
+    } else {
+      print("Login failed: invalid credentials or server error");
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: const Text('Credenciales incorrectas'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK')
+            )
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildSignUpForm() {
+    Widget _inputField({
+      required TextEditingController controller,
+      required String label,
+      bool obscure = false,
+      bool toggleObscure = false,
+      VoidCallback? onToggle,
+    }) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: TextField(
+          controller: controller,
+          obscureText: obscure,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(color: Colors.grey),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.all(16),
+            suffixIcon: toggleObscure
+                ? IconButton(
+                    icon: Icon(
+                      obscure ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: onToggle,
+                  )
+                : null,
+          ),
+        ),
+      );
+    }
+
+    const passwordHints = [
+      'At least one character in uppercase and lowercase',
+      'At least a number',
+      'At least a special character',
+      'At least 8 characters',
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _inputField(controller: _fullNameController, label: 'Full name'),
         const SizedBox(height: 16),
-        
-        // Terms and conditions checkbox
+        _inputField(controller: _signupEmailController, label: 'Email address'),
+        const SizedBox(height: 16),
+        _inputField(controller: _dniController, label: 'Dni'),
+        const SizedBox(height: 16),
+        _inputField(controller: _phoneController, label: 'Phone number'),
+        const SizedBox(height: 16),
+        _inputField(
+          controller: _signupPasswordController,
+          label: 'Password',
+          obscure: _obscureSignupPassword,
+          toggleObscure: true,
+          onToggle: () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
+        ),
+        const SizedBox(height: 16),
+        _inputField(
+          controller: _confirmPasswordController,
+          label: 'Confirm your password',
+          obscure: _obscureConfirmPassword,
+          toggleObscure: true,
+          onToggle: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+        ),
+        const SizedBox(height: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: passwordHints.map((hint) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.circle, size: 6, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(hint, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 16),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Checkbox(
               value: _acceptTerms,
-              onChanged: (value) => setState(() => _acceptTerms = value ?? false),
+              onChanged: (val) => setState(() => _acceptTerms = val ?? false),
               activeColor: const Color(0xFF1976D2),
             ),
             Expanded(
@@ -996,10 +458,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         color: Color(0xFF1976D2),
                         decoration: TextDecoration.underline,
                       ),
-                      recognizer: TapGestureRecognizer()
-                        ..onTap = () {
-                          print('Terms and Conditions tapped');
-                        },
+                      recognizer: TapGestureRecognizer()..onTap = () => print('Terms tapped'),
                     ),
                     const TextSpan(text: ' and '),
                     TextSpan(
@@ -1008,10 +467,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         color: Color(0xFF1976D2),
                         decoration: TextDecoration.underline,
                       ),
-                      recognizer: TapGestureRecognizer()
-                        ..onTap = () {
-                          print('Privacy policy tapped');
-                        },
+                      recognizer: TapGestureRecognizer()..onTap = () => print('Privacy tapped'),
                     ),
                   ],
                 ),
@@ -1019,49 +475,39 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ],
         ),
-        
         const SizedBox(height: 24),
-        
-        // Botón Continue
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _acceptTerms
-                ? () {
-                    // Debug prints
-                    print('SignUp - Full name: ${_fullNameController.text}');
-                    print('SignUp - Email: ${_signupEmailController.text}');
-                    print('SignUp - DNI: ${_dniController.text}');
-                    print('SignUp - Phone: ${_phoneController.text}');
-                    print('SignUp - Password: ${_signupPasswordController.text}');
-                    print('SignUp - Confirm Password: ${_confirmPasswordController.text}');
-
-                    // Cambiar a la vista de selección de tipo de cuenta
-                    setState(() {
-                      _showAccountTypeSelection = true;
-                    });
-                  }
-                : null,
+            onPressed: _acceptTerms ? _navigateToAccountTypeSelection : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1976D2),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text(
               'Continue',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
             ),
           ),
         ),
-        
         const SizedBox(height: 20),
       ],
+    );
+  }
+
+  void _navigateToAccountTypeSelection() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AccountTypeSelectionScreen(
+          fullName: _fullNameController.text,
+          email: _signupEmailController.text,
+          dni: _dniController.text,
+          phone: _phoneController.text,
+          password: _signupPasswordController.text,
+        ),
+      ),
     );
   }
 
