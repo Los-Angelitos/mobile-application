@@ -51,25 +51,21 @@ class HotelCard extends StatelessWidget {
                   bottom: 8,
                   left: 8,
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        Text(
-                          "4.0",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      width: 55,
+                      height: 55,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2), // cambia el width aquí si deseas
+                      ),
+                      child: ClipOval(
+                        child: Image.network(
+                          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIQ9WUL_LFf-l4PPaBUyvF37jWLVSYTjwVTg&s',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Icon(Icons.error, size: 24, color: Colors.red),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
                 ),
               ],
             ),
