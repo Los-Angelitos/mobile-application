@@ -7,6 +7,7 @@ class Hotel {
   final String address;
   final String phone;
   final int ownerId;
+  final String email;
   final String category;
 
   Hotel({
@@ -17,6 +18,7 @@ class Hotel {
     required this.address,
     required this.phone,
     required this.ownerId,
+    required this.email,
     required this.category,
   });
 
@@ -30,7 +32,7 @@ class Hotel {
         address: json['address']?.toString() ?? '',
         phone: json['phone']?.toString() ?? '',
         ownerId: _parseInt(json['ownerId']) ?? 0,
-        category: json['category']?.toString() ?? 'SUITE',
+        email: json['email']?.toString() ?? '',        category: json['category']?.toString() ?? 'SUITE',
       );
     } catch (e) {
       print('Error in Hotel.fromJson: $e');
@@ -67,6 +69,7 @@ class Hotel {
       'address': address,
       'phone': phone,
       'ownerId': ownerId,
+      'email': email,
       'category': category,
     };
   }

@@ -128,6 +128,68 @@ class HotelService extends BaseService {
     }
   }
 
+  Future<Hotel?> updateHotel(String hotelId, Map<String, dynamic> hotelData) async {
+  try {
+    print('Updating hotel with ID: $hotelId');
+
+    // Verificar si el token es válido antes de hacer la petición
+    final isValid = await _isTokenValid();
+    if (!isValid) {
+      await storage.delete(key: 'token');
+      throw Exception('Token inválido o expirado. Por favor, inicia sesión nuevamente.');
+    }
+
+    final headers = await _getAuthHeaders();
+
+    // Corregir la URL - evitar duplicación de /api/v1
+    String url;
+    if (baseUrl.endsWith('/api/v1')) {
+      url = '$baseUrl/hotels/$hotelId';
+    } else {
+      url = '$baseUrl/api/v1/hotels/$hotelId';
+    }
+
+    print('Making PUT request to: $url');
+    print('Request body: ${json.encode(hotelData)}');
+    print('Headers: ${headers.keys.join(', ')}');
+
+    final response = await http.put(
+      Uri.parse(url),
+      headers: headers,
+      body: json.encode(hotelData),
+    );
+
+    print('Update hotel response status: ${response.statusCode}');
+    print('Update hotel response body: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      print('Hotel updated successfully: ${data['name']}');
+      return Hotel.fromJson(data);
+    } else if (response.statusCode == 401) {
+      print('Unauthorized access - token may be expired');
+      await storage.delete(key: 'token');
+      throw Exception('Token inválido o expirado. Por favor, inicia sesión nuevamente.');
+    } else if (response.statusCode == 404) {
+      print('Hotel not found with ID: $hotelId');
+      throw Exception('Hotel no encontrado');
+    } else if (response.statusCode == 400) {
+      print('Bad request - invalid data: ${response.body}');
+      throw Exception('Datos inválidos para actualizar el hotel');
+    } else if (response.statusCode == 403) {
+      print('Forbidden - insufficient permissions');
+      throw Exception('No tienes permisos para actualizar este hotel');
+    } else {
+      print('Failed to update hotel: ${response.statusCode} - ${response.body}');
+      throw Exception('Error al actualizar el hotel: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('Error in updateHotel: $e');
+    rethrow; // Re-lanzamos la excepción para que sea manejada en la vista
+  }
+}
+
+
   Future<List<Hotel>> getAllHotels() async {
     try {
       // Verificar si el token es válido antes de hacer la petición
@@ -171,6 +233,8 @@ class HotelService extends BaseService {
       rethrow;
     }
   }
+
+
 
   // Método para verificar el estado del token
   Future<bool> checkTokenStatus() async {
