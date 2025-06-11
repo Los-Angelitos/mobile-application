@@ -5,13 +5,8 @@ import '../../Monitoring/services/hotel_service.dart';
 import '../services/multimedia_service.dart';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dart:typed_data';
 import 'dart:async';
-import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
-import 'package:sweetmanager/Monitoring/models/room.dart';
 import 'package:sweetmanager/Monitoring/services/room_service.dart';
-import 'package:sweetmanager/Organizational-Management/views/organization_view.dart';
 
 class HotelDetailView extends StatefulWidget {
 
@@ -281,23 +276,24 @@ Future<void> _updateHotelField(String field, String value) async {
     );
   }
 
-  @override
-Widget _buildContent() {
-  return Scaffold(
-    backgroundColor: Colors.grey[50],
-    appBar: AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-    ),
-    body: isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : error != null
-            ? _buildErrorWidget()
-            : _hotel != null
-                ? _buildHotelContent()
-                : const Center(child: Text('No se encontró el hotel')),
-  );
-}
+
+  Widget _buildContent() {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : error != null
+              ? _buildErrorWidget()
+              : _hotel != null
+                  ? _buildHotelContent()
+                  : const Center(child: Text('No se encontró el hotel')),
+    );
+  }
+  
   Widget _buildErrorWidget() {
     return Center(
       child: Column(

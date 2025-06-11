@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/auth_service.dart';
-import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 
 class BaseLayout extends StatelessWidget {
   final Widget childScreen; // The content of the screen

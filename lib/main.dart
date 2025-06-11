@@ -8,8 +8,8 @@ import 'package:sweetmanager/IAM/views/user_profile_account.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 import 'package:sweetmanager/Monitoring/views/guest_reservation.dart';
 import 'package:sweetmanager/Monitoring/views/rooms_view.dart';
-import 'package:sweetmanager/Organizational-Management/views/hotel_overview_view.dart';
-import 'package:sweetmanager/Organizational-Management/views/organization_view.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/hotel_overview.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/my_organization.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import 'package:sweetmanager/Monitoring/views/reservations_view.dart';
 import 'Inventory/views/providers_view.dart';
@@ -45,8 +45,8 @@ class MyApp extends StatelessWidget {
           role: 'guest',
           childScreen: const ReservationsView(),
         ),
-        '/subscriptions': (context) => const SubscriptionPlans()
-        '/main': (context) => HomeScreen(),
+        '/subscriptions': (context) => const SubscriptionPlans(),
+        '/main': (context) => const HomeScreen(),
         /*'/dashboard': (context) => const DashboardScreen(),
         // '/dashboard': (context) => const DashboardScreen(),
         '/login': (context) => const LogInScreen(),
