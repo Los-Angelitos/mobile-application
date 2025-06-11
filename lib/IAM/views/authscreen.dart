@@ -2,22 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/auth_service.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
-import 'account_type_selection_screen.dart'; // Import la nueva pantalla
+import 'account_type_selection_screen.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({Key? key}) : super(key: key);
+  const AuthScreen({super.key});
+  
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  // Login controllers
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _obscurePassword = true;
   String? _selectedLoginRole;
   
-  // Controladores para Sign Up
+  // Sign up controllers
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _signupEmailController = TextEditingController();
   final TextEditingController _dniController = TextEditingController();
@@ -28,10 +30,17 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
   
+  // State management
   bool _isLoginTab = true;
   bool _isLoading = false;
   final ScrollController _loginScrollController = ScrollController();
   final ScrollController _signupScrollController = ScrollController();
+
+  // Constants
+  static const Color _primaryColor = Color(0xFF1976D2);
+  static const TextStyle _labelStyle = TextStyle(color: Colors.grey);
+  static const EdgeInsets _fieldPadding = EdgeInsets.all(16);
+  static const BorderRadius _borderRadius = BorderRadius.all(Radius.circular(8));
 
   @override
   Widget build(BuildContext context) {
@@ -51,45 +60,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildAuthScreen() {
-    final textStyle = const TextStyle(fontSize: 14, color: Colors.grey);
-    final scrollCtrl = _isLoginTab ? _loginScrollController : _signupScrollController;
-
-    Widget _buildTab(String label, bool isLogin) {
-      final active = _isLoginTab == isLogin;
-      return Expanded(
-        child: GestureDetector(
-          onTap: () => _switchTab(isLogin),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: active ? Colors.white : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: active
-                  ? const Border(bottom: BorderSide(color: Color(0xFF1976D2), width: 2))
-                  : null,
-            ),
-            child: _isLoading && active
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(Color(0xFF1976D2)),
-                    ),
-                  )
-                : Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: active ? const Color(0xFF1976D2) : Colors.grey,
-                      fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-          ),
-        ),
-      );
-    }
-
+    const textStyle = TextStyle(fontSize: 14, color: Colors.grey);
+    
     return Padding(
       key: const ValueKey('auth_screen'),
       padding: const EdgeInsets.all(24),
@@ -97,8 +69,14 @@ class _AuthScreenState extends State<AuthScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 40),
-          const Text('Welcome to Sweet Manager',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Color(0xFF1976D2))),
+          const Text(
+            'Welcome to Sweet Manager',
+            style: TextStyle(
+              fontSize: 24, 
+              fontWeight: FontWeight.w600, 
+              color: _primaryColor,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
             _isLoginTab
@@ -107,44 +85,98 @@ class _AuthScreenState extends State<AuthScreen> {
             style: textStyle,
           ),
           const SizedBox(height: 32),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 3, offset: const Offset(0, 1))],
-            ),
-            child: Row(children: [_buildTab('Log in', true), _buildTab('Sign up', false)]),
-          ),
+          _buildTabSelector(),
           const SizedBox(height: 24),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Scrollbar(
-                key: ValueKey(_isLoginTab),
-                controller: scrollCtrl,
-                thumbVisibility: true,
-                trackVisibility: true,
-                thickness: 6,
-                radius: const Radius.circular(3),
-                child: SingleChildScrollView(
-                  controller: scrollCtrl,
-                  padding: const EdgeInsets.only(right: 12),
-                  child: _isLoginTab ? _buildLoginForm() : _buildSignUpForm(),
-                ),
-              ),
-            ),
-          ),
+          Expanded(child: _buildFormContent()),
         ],
       ),
     );
   }
 
-  void _switchTab(bool isLogin) async {
+  Widget _buildTabSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: _borderRadius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1), 
+            blurRadius: 3, 
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _buildTab('Log in', true),
+          _buildTab('Sign up', false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTab(String label, bool isLogin) {
+    final bool isActive = _isLoginTab == isLogin;
+    
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _switchTab(isLogin),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: isActive ? Colors.white : Colors.transparent,
+            borderRadius: _borderRadius,
+            border: isActive
+                ? const Border(bottom: BorderSide(color: _primaryColor, width: 2))
+                : null,
+          ),
+          child: _isLoading && isActive
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(_primaryColor),
+                  ),
+                )
+              : Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isActive ? _primaryColor : Colors.grey,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormContent() {
+    final scrollController = _isLoginTab ? _loginScrollController : _signupScrollController;
+    
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: Scrollbar(
+        key: ValueKey(_isLoginTab),
+        controller: scrollController,
+        thumbVisibility: true,
+        trackVisibility: true,
+        thickness: 6,
+        radius: const Radius.circular(3),
+        child: SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.only(right: 12),
+          child: _isLoginTab ? _buildLoginForm() : _buildSignUpForm(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _switchTab(bool isLogin) async {
     if (_isLoading) return;
     
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     await Future.delayed(const Duration(milliseconds: 400));
     
     setState(() {
@@ -156,73 +188,80 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Widget _buildLoginForm() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Campo Email
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              labelStyle: TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
+        _buildInputField(
+          controller: _emailController,
+          label: 'Email',
+        ),
+        const SizedBox(height: 16),
+        _buildInputField(
+          controller: _passwordController,
+          label: 'Password',
+          obscureText: _obscurePassword,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              color: Colors.grey,
             ),
+            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
           ),
         ),
-        
         const SizedBox(height: 16),
-        
-        // Campo Password
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          child: TextField(
-            controller: _passwordController,
-            obscureText: _obscurePassword,
-            decoration: InputDecoration(
-              labelText: 'Password',
-              labelStyle: const TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey,
-                ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-              ),
-            ),
-          ),
+        _buildRememberMeCheckbox(),
+        const SizedBox(height: 16),
+        _buildRoleSelection(),
+        const SizedBox(height: 24),
+        _buildLoginButton(),
+        const SizedBox(height: 16),
+        _buildForgotPasswordButton(),
+      ],
+    );
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: _borderRadius,
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: _labelStyle,
+          border: InputBorder.none,
+          contentPadding: _fieldPadding,
+          suffixIcon: suffixIcon,
         ),
-        
-        const SizedBox(height: 16),
-        
-        // Remember me checkbox
-        Row(
-          children: [
-            Checkbox(
-              value: _rememberMe,
-              onChanged: (value) => setState(() => _rememberMe = value ?? false),
-              activeColor: const Color(0xFF1976D2),
-            ),
-            const Text(
-              'Remember me',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
+      ),
+    );
+  }
+
+  Widget _buildRememberMeCheckbox() {
+    return Row(
+      children: [
+        Checkbox(
+          value: _rememberMe,
+          onChanged: (value) => setState(() => _rememberMe = value ?? false),
+          activeColor: _primaryColor,
         ),
-        
-        const SizedBox(height: 16),
-        
-        // Selección de rol
+        const Text('Remember me', style: _labelStyle),
+      ],
+    );
+  }
+
+  Widget _buildRoleSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         const Text(
           'Select your role:',
           style: TextStyle(
@@ -231,67 +270,86 @@ class _AuthScreenState extends State<AuthScreen> {
             color: Colors.black87,
           ),
         ),
-        
         const SizedBox(height: 12),
-        
-        // Radio buttons para rol
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: _borderRadius,
             border: Border.all(color: Colors.grey[300]!),
           ),
           child: Column(
             children: [
-              RadioListTile<String>(
-                title: const Text('Guest', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                subtitle: const Text('I want to search and book hotel stays', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              _buildRoleOption(
                 value: 'guest',
-                groupValue: _selectedLoginRole,
-                onChanged: (value) => setState(() => _selectedLoginRole = value),
-                activeColor: const Color(0xFF1976D2),
-                dense: true,
+                title: 'Guest',
+                subtitle: 'I want to search and book hotel stays',
               ),
               const Divider(height: 1),
-              RadioListTile<String>(
-                title: const Text('Owner', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                subtitle: const Text('I want to manage my hotel business', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              _buildRoleOption(
                 value: 'owner',
-                groupValue: _selectedLoginRole,
-                onChanged: (value) => setState(() => _selectedLoginRole = value),
-                activeColor: const Color(0xFF1976D2),
-                dense: true,
+                title: 'Owner',
+                subtitle: 'I want to manage my hotel business',
               ),
             ],
           ),
         ),
-        
-        const SizedBox(height: 24),
-        
-        // Botón Log in
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _selectedLoginRole != null ? _handleLogin : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1976D2),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Log in', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Forgot password
-        Center(
-          child: TextButton(
-            onPressed: () => print('Forgot password pressed'),
-            child: const Text('Forgot my password', style: TextStyle(color: Color(0xFF1976D2), fontSize: 14)),
-          ),
-        ),
       ],
+    );
+  }
+
+  Widget _buildRoleOption({
+    required String value,
+    required String title,
+    required String subtitle,
+  }) {
+    return RadioListTile<String>(
+      title: Text(
+        title, 
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      ),
+      subtitle: Text(
+        subtitle, 
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+      value: value,
+      groupValue: _selectedLoginRole,
+      onChanged: (selectedValue) => setState(() => _selectedLoginRole = selectedValue),
+      activeColor: _primaryColor,
+      dense: true,
+    );
+  }
+
+  Widget _buildLoginButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _selectedLoginRole != null ? _handleLogin : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _primaryColor,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: const RoundedRectangleBorder(borderRadius: _borderRadius),
+        ),
+        child: const Text(
+          'Log in', 
+          style: TextStyle(
+            fontSize: 16, 
+            fontWeight: FontWeight.w600, 
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForgotPasswordButton() {
+    return Center(
+      child: TextButton(
+        onPressed: _handleForgotPassword,
+        child: const Text(
+          'Forgot my password', 
+          style: TextStyle(color: _primaryColor, fontSize: 14),
+        ),
+      ),
     );
   }
 
@@ -299,96 +357,143 @@ class _AuthScreenState extends State<AuthScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final role = _selectedLoginRole!;
-    int roleId = 0;
     final authService = AuthService();
 
-    if (role == 'guest') {
-      roleId = 3;
-    } else if (role == 'owner') {
-      roleId = 1;
-    } else {
-      print("Unknown role: $role");
-    }
-
-    bool success = false;
-
-    try {
-      success = await authService.login(email, password, roleId);
-    } catch (e, stack) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Error'),
-          content: Text('Ocurrió un error al intentar iniciar sesión: $e'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
+    // Validate input
+    if (email.isEmpty || password.isEmpty) {
+      _showErrorDialog('Please fill in all fields');
       return;
     }
 
-    if (success) {
-      print("Login successful, navigating to /home");
-      Navigator.pushNamed(context, '/organization');
-    } else {
-      print("Login failed: invalid credentials or server error");
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Error'),
-          content: const Text('Credenciales incorrectas'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK')
-            )
-          ],
-        ),
-      );
+    final int roleId = _getRoleId(role);
+    if (roleId == 0) {
+      _showErrorDialog('Invalid role selection');
+      return;
+    }
+
+    try {
+      final bool success = await authService.login(email, password, roleId);
+      
+      if (success && mounted) {
+        if (roleId == 1) {
+          Navigator.pushNamed(context, '/organization');
+        } else {
+          Navigator.pushNamed(context, '/main');
+        }
+      } else if (mounted) {
+        _showErrorDialog('Invalid credentials');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog('An error occurred while trying to log in: $e');
+      }
     }
   }
 
-  Widget _buildSignUpForm() {
-    Widget _inputField({
-      required TextEditingController controller,
-      required String label,
-      bool obscure = false,
-      bool toggleObscure = false,
-      VoidCallback? onToggle,
-    }) {
-      return Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: TextField(
-          controller: controller,
-          obscureText: obscure,
-          decoration: InputDecoration(
-            labelText: label,
-            labelStyle: const TextStyle(color: Colors.grey),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.all(16),
-            suffixIcon: toggleObscure
-                ? IconButton(
-                    icon: Icon(
-                      obscure ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey,
-                    ),
-                    onPressed: onToggle,
-                  )
-                : null,
-          ),
-        ),
-      );
+  int _getRoleId(String role) {
+    switch (role) {
+      case 'guest':
+        return 3;
+      case 'owner':
+        return 1;
+      default:
+        return 0;
     }
+  }
 
-    const passwordHints = [
+  void _handleForgotPassword() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Forgot password functionality coming soon')),
+    );
+  }
+
+  Widget _buildSignUpForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSignUpInputField(
+          controller: _fullNameController, 
+          label: 'Full name',
+        ),
+        const SizedBox(height: 16),
+        _buildSignUpInputField(
+          controller: _signupEmailController, 
+          label: 'Email address',
+        ),
+        const SizedBox(height: 16),
+        _buildSignUpInputField(
+          controller: _dniController, 
+          label: 'DNI',
+        ),
+        const SizedBox(height: 16),
+        _buildSignUpInputField(
+          controller: _phoneController, 
+          label: 'Phone number',
+        ),
+        const SizedBox(height: 16),
+        _buildSignUpInputField(
+          controller: _signupPasswordController,
+          label: 'Password',
+          obscureText: _obscureSignupPassword,
+          toggleObscure: true,
+          onToggle: () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
+        ),
+        const SizedBox(height: 16),
+        _buildSignUpInputField(
+          controller: _confirmPasswordController,
+          label: 'Confirm your password',
+          obscureText: _obscureConfirmPassword,
+          toggleObscure: true,
+          onToggle: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+        ),
+        const SizedBox(height: 16),
+        _buildPasswordHints(),
+        const SizedBox(height: 16),
+        _buildTermsAndConditions(),
+        const SizedBox(height: 24),
+        _buildContinueButton(),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildSignUpInputField({
+    required TextEditingController controller,
+    required String label,
+    bool obscureText = false,
+    bool toggleObscure = false,
+    VoidCallback? onToggle,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: _borderRadius,
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: _labelStyle,
+          border: InputBorder.none,
+          contentPadding: _fieldPadding,
+          suffixIcon: toggleObscure
+              ? IconButton(
+                  icon: Icon(
+                    obscureText ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey,
+                  ),
+                  onPressed: onToggle,
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordHints() {
+    const passwordRequirements = [
       'At least one character in uppercase and lowercase',
       'At least a number',
       'At least a special character',
@@ -397,122 +502,182 @@ class _AuthScreenState extends State<AuthScreen> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      children: passwordRequirements.map((requirement) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Row(
+            children: [
+              const Icon(Icons.circle, size: 6, color: Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                requirement, 
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTermsAndConditions() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _inputField(controller: _fullNameController, label: 'Full name'),
-        const SizedBox(height: 16),
-        _inputField(controller: _signupEmailController, label: 'Email address'),
-        const SizedBox(height: 16),
-        _inputField(controller: _dniController, label: 'Dni'),
-        const SizedBox(height: 16),
-        _inputField(controller: _phoneController, label: 'Phone number'),
-        const SizedBox(height: 16),
-        _inputField(
-          controller: _signupPasswordController,
-          label: 'Password',
-          obscure: _obscureSignupPassword,
-          toggleObscure: true,
-          onToggle: () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
+        Checkbox(
+          value: _acceptTerms,
+          onChanged: (value) => setState(() => _acceptTerms = value ?? false),
+          activeColor: _primaryColor,
         ),
-        const SizedBox(height: 16),
-        _inputField(
-          controller: _confirmPasswordController,
-          label: 'Confirm your password',
-          obscure: _obscureConfirmPassword,
-          toggleObscure: true,
-          onToggle: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-        ),
-        const SizedBox(height: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: passwordHints.map((hint) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                children: [
-                  const Icon(Icons.circle, size: 6, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Text(hint, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Checkbox(
-              value: _acceptTerms,
-              onChanged: (val) => setState(() => _acceptTerms = val ?? false),
-              activeColor: const Color(0xFF1976D2),
-            ),
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  children: [
-                    const TextSpan(text: "I've read and accept the "),
-                    TextSpan(
-                      text: 'Terms and Conditions',
-                      style: const TextStyle(
-                        color: Color(0xFF1976D2),
-                        decoration: TextDecoration.underline,
-                      ),
-                      recognizer: TapGestureRecognizer()..onTap = () => print('Terms tapped'),
-                    ),
-                    const TextSpan(text: ' and '),
-                    TextSpan(
-                      text: 'Privacy policy',
-                      style: const TextStyle(
-                        color: Color(0xFF1976D2),
-                        decoration: TextDecoration.underline,
-                      ),
-                      recognizer: TapGestureRecognizer()..onTap = () => print('Privacy tapped'),
-                    ),
-                  ],
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              children: [
+                const TextSpan(text: "I've read and accept the "),
+                TextSpan(
+                  text: 'Terms and Conditions',
+                  style: const TextStyle(
+                    color: _primaryColor,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: TapGestureRecognizer()..onTap = _showTermsAndConditions,
                 ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _acceptTerms ? _navigateToAccountTypeSelection : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1976D2),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text(
-              'Continue',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                const TextSpan(text: ' and '),
+                TextSpan(
+                  text: 'Privacy policy',
+                  style: const TextStyle(
+                    color: _primaryColor,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: TapGestureRecognizer()..onTap = _showPrivacyPolicy,
+                ),
+              ],
             ),
           ),
         ),
-        const SizedBox(height: 20),
       ],
     );
   }
 
+  Widget _buildContinueButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _acceptTerms ? _navigateToAccountTypeSelection : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _primaryColor,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: const RoundedRectangleBorder(borderRadius: _borderRadius),
+        ),
+        child: const Text(
+          'Continue',
+          style: TextStyle(
+            fontSize: 16, 
+            fontWeight: FontWeight.w600, 
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _navigateToAccountTypeSelection() {
+    // Validate sign-up form
+    if (!_validateSignUpForm()) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AccountTypeSelectionScreen(
-          fullName: _fullNameController.text,
-          email: _signupEmailController.text,
-          dni: _dniController.text,
-          phone: _phoneController.text,
+          fullName: _fullNameController.text.trim(),
+          email: _signupEmailController.text.trim(),
+          dni: _dniController.text.trim(),
+          phone: _phoneController.text.trim(),
           password: _signupPasswordController.text,
         ),
       ),
     );
   }
 
+  bool _validateSignUpForm() {
+    final fullName = _fullNameController.text.trim();
+    final email = _signupEmailController.text.trim();
+    final dni = _dniController.text.trim();
+    final phone = _phoneController.text.trim();
+    final password = _signupPasswordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (fullName.isEmpty || email.isEmpty || dni.isEmpty || 
+        phone.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      _showErrorDialog('Please fill in all fields');
+      return false;
+    }
+
+    if (password != confirmPassword) {
+      _showErrorDialog('Passwords do not match');
+      return false;
+    }
+
+    if (!_isValidEmail(email)) {
+      _showErrorDialog('Please enter a valid email address');
+      return false;
+    }
+
+    if (!_isValidPassword(password)) {
+      _showErrorDialog('Password does not meet requirements');
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  bool _isValidPassword(String password) {
+    // At least 8 characters, one uppercase, one lowercase, one number, one special character
+    return password.length >= 8 &&
+           RegExp(r'[A-Z]').hasMatch(password) &&
+           RegExp(r'[a-z]').hasMatch(password) &&
+           RegExp(r'[0-9]').hasMatch(password) &&
+           RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+  }
+
+  void _showErrorDialog(String message) {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsAndConditions() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Terms and Conditions will be displayed here')),
+    );
+  }
+
+  void _showPrivacyPolicy() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Privacy Policy will be displayed here')),
+    );
+  }
+
   @override
   void dispose() {
+    // Dispose controllers
     _emailController.dispose();
     _passwordController.dispose();
     _fullNameController.dispose();
@@ -521,8 +686,11 @@ class _AuthScreenState extends State<AuthScreen> {
     _phoneController.dispose();
     _signupPasswordController.dispose();
     _confirmPasswordController.dispose();
+    
+    // Dispose scroll controllers
     _loginScrollController.dispose();
     _signupScrollController.dispose();
+    
     super.dispose();
   }
 }
