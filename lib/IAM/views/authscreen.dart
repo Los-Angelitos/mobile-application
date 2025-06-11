@@ -333,7 +333,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (success) {
       print("Login successful, navigating to /home");
-      Navigator.pushNamed(context, '/home');
+      Navigator.pushNamed(context, '/organization');
     } else {
       print("Login failed: invalid credentials or server error");
       showDialog(

@@ -64,37 +64,16 @@ class BaseLayout extends StatelessWidget {
       return [
         ListTile(
           leading: const Icon(Icons.dashboard),
-          title: const Text('Dashboard'),
+          title: const Text('Organization Members'),
           onTap: () {
-            Navigator.pushNamed(context, '/dashboard');
+            Navigator.pushNamed(context, '/organization');
           },
         ),
         ListTile(
-          leading: const Icon(Icons.message),
-          title: const Text('Notifications'),
-          onTap: () {
-            Navigator.pushNamed(context, '/notifications');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.subscriptions),
-          title: const Text('Current Subscription'),
-          onTap: () {
-            Navigator.pushNamed(context, '/current-subscription');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.emoji_transportation),
-          title: const Text('Suppliers Management'),
+          leading: const Icon(Icons.support_outlined),
+          title: const Text('Providers Management'),
           onTap: () {
             Navigator.pushNamed(context, '/providers');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.food_bank),
-          title: const Text('Supplies Management'),
-          onTap: () {
-            Navigator.pushNamed(context, '/supplies');
           },
         ),
         ListTile(
@@ -105,31 +84,31 @@ class BaseLayout extends StatelessWidget {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.admin_panel_settings),
-          title: const Text('Admins Management'),
+          leading: const Icon(Icons.book),
+          title: const Text('Reservations'),
           onTap: () {
-            Navigator.pushNamed(context, '/admins-management');
+            Navigator.pushNamed(context, '/reservations');
           },
         ),
         ListTile(
-          leading: const Icon(Icons.work),
-          title: const Text('Workers Management'),
+          leading: const Icon(Icons.subscriptions),
+          title: const Text('Subscriptions'),
           onTap: () {
-            Navigator.pushNamed(context, '/workers-management');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.back_hand),
-          title: const Text('Customers Management'),
-          onTap: () {
-            Navigator.pushNamed(context, '/customers-management');
+            Navigator.pushNamed(context, '/subscriptions');
           },
         ),
         ListTile(
           leading: const Icon(Icons.person),
-          title: const Text('Profiles'),
+          title: const Text('Profile Info'),
           onTap: () {
-            Navigator.pushNamed(context, '/profiles');
+            Navigator.pushNamed(context, '/profile/info');
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.person),
+          title: const Text('Profile Account'),
+          onTap: () {
+            Navigator.pushNamed(context, '/profile/account');
           },
         ),
         ListTile(
@@ -137,7 +116,7 @@ class BaseLayout extends StatelessWidget {
           title: const Text('Sign Out'),
           onTap: () {
             _authService.logout();
-
+              
             Navigator.pushNamed(context, '/home');
           },
         ),
@@ -145,52 +124,31 @@ class BaseLayout extends StatelessWidget {
     } else if (role == 'ROLE_GUEST') {
       return [
         ListTile(
-          leading: const Icon(Icons.dashboard),
-          title: const Text('Dashboard'),
+          leading: const Icon(Icons.person),
+          title: const Text('My Reservations'),
           onTap: () {
-            Navigator.pushNamed(context, '/dashboard');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.emoji_transportation),
-          title: const Text('Suppliers Management'),
-          onTap: () {
-            Navigator.pushNamed(context, '/providers');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.food_bank),
-          title: const Text('Supplies Management'),
-          onTap: () {
-            Navigator.pushNamed(context, '/supplies');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.room),
-          title: const Text('Rooms Management'),
-          onTap: () {
-            Navigator.pushNamed(context, '/rooms');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.message),
-          title: const Text('Messages'),
-          onTap: () {
-            Navigator.pushNamed(context, '/messages');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.report),
-          title: const Text('Reports'),
-          onTap: () {
-            Navigator.pushNamed(context, '/reports');
+            Navigator.pushNamed(context, '/guest-reservation');
           },
         ),
         ListTile(
           leading: const Icon(Icons.person),
-          title: const Text('Profiles'),
+          title: const Text('Profile Preferences'),
           onTap: () {
-            Navigator.pushNamed(context, '/profiles');
+            Navigator.pushNamed(context, '/profile/preferences');
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.person),
+          title: const Text('Profile Info'),
+          onTap: () {
+            Navigator.pushNamed(context, '/profile/info');
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.person),
+          title: const Text('Profile Account'),
+          onTap: () {
+            Navigator.pushNamed(context, '/profile/account');
           },
         ),
         ListTile(

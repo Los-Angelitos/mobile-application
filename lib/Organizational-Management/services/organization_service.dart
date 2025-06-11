@@ -2,7 +2,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../shared/infrastructure/services/base_service.dart';
 
 class OrganizationApiService extends BaseService {
