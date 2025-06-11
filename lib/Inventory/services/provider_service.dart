@@ -4,7 +4,7 @@ import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import '../models/provider.dart';
 
 class ProviderService extends BaseService {
-  Future<List<Provider>> getProvidersByHotelId(int hotelId) async {
+  Future<List<Provider>> getProvidersByHotelId(String hotelId) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/providers/hotel/$hotelId'),

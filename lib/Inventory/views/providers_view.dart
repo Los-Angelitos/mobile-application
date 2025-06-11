@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
+import '../../IAM/infrastructure/auth/auth_service.dart';
 import '../models/provider.dart';
 import '../services/provider_service.dart';
 import '../widgets/provider_card.dart';
@@ -15,6 +18,7 @@ class ProvidersView extends StatefulWidget {
 
 class _ProvidersViewState extends State<ProvidersView> {
   final ProviderService _providerService = ProviderService();
+  final AuthService _authService = AuthService();
   List<Provider> _providers = [];
   bool _loading = true;
 
@@ -24,15 +28,105 @@ class _ProvidersViewState extends State<ProvidersView> {
     _fetchProviders();
   }
 
-  Future<int?> getHotelIdFromToken() async {
-    const storage = FlutterSecureStorage();
-    final token = await storage.read(key: 'token');
+  Future<String?> getHotelIdFromToken() async {
+    try {
+      final token = await _authService.storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('No token found');
+      }
 
-    if (token == null) return null;
-    final decoded = JwtDecoder.decode(token);
-    final hotelId = decoded['hotelId'];
+      print('Token found: ${token.substring(0, 20)}...');
 
-    return hotelId is int ? hotelId : int.tryParse(hotelId.toString());
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        throw Exception('Invalid JWT format');
+      }
+
+      String base64Payload = parts[1];
+
+      while (base64Payload.length % 4 != 0) {
+        base64Payload += '=';
+      }
+
+      final payload = json.decode(utf8.decode(base64Decode(base64Payload)));
+      print('Token payload: $payload');
+
+      // Intenta diferentes claims posibles
+      final possibleClaims = [
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/locality",
+        "locality",
+        "hotelId",
+      ];
+
+      String? hotelId;
+      for (final claim in possibleClaims) {
+        if (payload[claim] != null) {
+          hotelId = payload[claim].toString();
+          print('Found hotel ID in claim "$claim": $hotelId');
+          break;
+        }
+      }
+
+      if (hotelId == null) {
+        print('Available claims in token: ${payload.keys.toList()}');
+        throw Exception('Customer ID not found in token');
+      }
+
+      return hotelId;
+    } catch (e) {
+      print('Error getting hotel ID from token: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getRoleFromToken() async {
+    try {
+      final token = await _authService.storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('No token found');
+      }
+
+      print('Token found: ${token.substring(0, 20)}...');
+
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        throw Exception('Invalid JWT format');
+      }
+
+      String base64Payload = parts[1];
+
+      while (base64Payload.length % 4 != 0) {
+        base64Payload += '=';
+      }
+
+      final payload = json.decode(utf8.decode(base64Decode(base64Payload)));
+      print('Token payload: $payload');
+
+      // Posibles claims donde se podría almacenar el rol del usuario
+      final possibleClaims = [
+        "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+        "role",
+      ];
+
+      String? userRole;
+      for (final claim in possibleClaims) {
+        if (payload.containsKey(claim)) {
+          userRole = payload[claim].toString();
+          print('Found role in claim "$claim": $userRole');
+          break;
+        }
+      }
+
+      if (userRole == null) {
+        print('Available claims in token: ${payload.keys.toList()}');
+        throw Exception('User role not found in token');
+      }
+
+      return userRole;
+    } catch (e) {
+      print('Error getting role from token: $e');
+      return null;
+    }
   }
 
   Future<void> _fetchProviders() async {
@@ -101,6 +195,9 @@ class _ProvidersViewState extends State<ProvidersView> {
 
   Widget getContentBuild(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Providers'),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
