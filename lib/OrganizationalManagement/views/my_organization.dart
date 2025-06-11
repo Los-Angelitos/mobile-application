@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
-import '../services/organization_service.dart';
+import '../services/hotel_service.dart';
 import '../widgets/organization_card.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
@@ -13,7 +13,7 @@ class OrganizationPage extends StatefulWidget {
 }
 
 class _OrganizationPageState extends State<OrganizationPage> {
-  final OrganizationApiService _organizationService = OrganizationApiService();
+  final HotelService _organizationService = HotelService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Map<String, dynamic>? currentUser;

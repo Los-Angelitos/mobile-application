@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
-import 'package:sweetmanager/Monitoring/models/room.dart';
 
 class MultimediaService extends BaseService {
 
