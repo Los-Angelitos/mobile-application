@@ -70,7 +70,7 @@ class BaseLayout extends StatelessWidget {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.precision_manufacturing),
+          leading: const Icon(Icons.support_outlined),
           title: const Text('Providers Management'),
           onTap: () {
             Navigator.pushNamed(context, '/providers');

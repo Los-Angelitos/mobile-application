@@ -45,11 +45,7 @@ class Booking {
         startDate: _parseDate(json['startDate']) ?? DateTime.now(),
         finalDate: _parseDate(json['finalDate']) ?? DateTime.now().add(const Duration(days: 1)),
         priceRoom: _parseDouble(json['priceRoom'] ?? json['price_room'] ?? json['price']) ?? 0.0,
-        nightCount: _parseInt(json['nightCount'] ?? json['night_count']) ??
-            _calculateNightCount(
-                _parseDate(json['startDate']),
-                _parseDate(json['finalDate'])
-            ),
+        nightCount: _parseInt(json['nightCount'] ?? json['night_count']),
         amount: _parseDouble(json['amount']) ?? 0.0,
         state: json['state']?.toString()?.toLowerCase() ?? 'inactive',
         preferenceId: json['preferenceId']?.toString() ??
