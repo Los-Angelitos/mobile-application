@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:sweetmanager/Commerce/views/subscription_plans.dart';
 import 'package:sweetmanager/IAM/views/authscreen.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/main_page.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_account.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 import 'package:sweetmanager/Monitoring/views/guest_reservation.dart';
 import 'package:sweetmanager/Monitoring/views/rooms_view.dart';
+import 'package:sweetmanager/Organizational-Management/views/hotel_overview_view.dart';
 import 'package:sweetmanager/Organizational-Management/views/organization_view.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import 'package:sweetmanager/Monitoring/views/reservations_view.dart';
@@ -24,6 +26,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sweet Manager',
+    
       theme: ThemeData(primarySwatch: Colors.blue),
       initialRoute: '/home',
       routes: {
@@ -37,15 +40,17 @@ class MyApp extends StatelessWidget {
         '/organization': (context) => const OrganizationPage(),
         '/signup': (context) => const AuthScreen(),
         '/providers': (context) => const ProvidersView(),
+        '/hotel/overview': (context) => const HotelDetailView(),
         '/bookings': (context) => BaseLayout(
           role: 'guest',
           childScreen: const ReservationsView(),
         ),
         '/subscriptions': (context) => const SubscriptionPlans()
+        '/main': (context) => HomeScreen(),
+        /*'/dashboard': (context) => const DashboardScreen(),
         // '/dashboard': (context) => const DashboardScreen(),
-        /* '/login': (context) => const LogInScreen(),
+        '/login': (context) => const LogInScreen(),
         '/dashboard': (context) => const DashboardScreen(),
-        '/home': (context) => const HomeView(), // the default app's entry point 
         // '/subscription': (context) => const SubscriptionPlansView(),
         '/rooms': (context) => const TableRoom(),
         '/providers': (context) => const ProvidersManagement(),
