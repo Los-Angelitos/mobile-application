@@ -6,6 +6,7 @@ import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 class AccountPage extends StatefulWidget {
   AccountPage({super.key});
@@ -99,9 +100,33 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
+    return FutureBuilder(
+      future: getRoleId(), 
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting)
+        {
+          return const Center(child: CircularProgressIndicator(),);
+        }
+
+        if (snapshot.hasData) 
+        {
+            int? role = widget.roleId!;
+
+            if (role == 1) {
+              return BaseLayout(role: "ROLE_OWNER", childScreen: getContentView());
+            }
+            else{
+              return BaseLayout(role: "ROLE_GUEST", childScreen: getContentView());
+            }
+        }
+
+        return const Center(child: Text('Unable to get information', textAlign: TextAlign.center,));
+      }
+    );
+  }
+
+  Widget getContentView() {
+    return Center(
         child: Column(
           children: [
             const SizedBox(height: 60),
@@ -140,7 +165,7 @@ class _AccountPageState extends State<AccountPage> {
                     children: [
                       Text(
                         userFullName,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
@@ -211,9 +236,9 @@ class _AccountPageState extends State<AccountPage> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
+
 
   Widget buildListTile(
     BuildContext context, {
