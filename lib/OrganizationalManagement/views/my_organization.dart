@@ -255,8 +255,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
       color: const Color(0xFFF8F9FA),
       child: Column(
         children: [
-          // Header personalizado (reemplaza el AppBar anterior)
-          _buildCustomHeader(),
           // Contenido principal
           Expanded(
             child: SingleChildScrollView(
@@ -278,46 +276,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCustomHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'Organization',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: _refreshUser,
-            icon: const Icon(Icons.refresh_rounded, color: Colors.black),
-            tooltip: 'Refresh',
           ),
         ],
       ),
