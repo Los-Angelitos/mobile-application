@@ -6,10 +6,13 @@ import '../models/provider.dart';
 class ProviderService extends BaseService {
   Future<List<Provider>> getProvidersByHotelId(String hotelId) async {
     try {
+      final token = await storage.read(key: 'token');
+
       final response = await http.get(
         Uri.parse('$baseUrl/providers/hotel/$hotelId'),
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
         },
       );
 
@@ -26,10 +29,12 @@ class ProviderService extends BaseService {
 
   Future<List<Provider>> getProviders() async {
     try {
+      final token = storage.read(key: 'token');
       final response = await http.get(
         Uri.parse('$baseUrl/providers'),
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
         },
       );
 
@@ -46,10 +51,12 @@ class ProviderService extends BaseService {
 
   Future<Provider?> getProviderById(int id) async {
     try {
+      final token = storage.read(key: 'token');
       final response = await http.get(
         Uri.parse('$baseUrl/providers/$id'),
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
         },
       );
 
@@ -66,10 +73,12 @@ class ProviderService extends BaseService {
 
   Future<bool> createProvider(Provider provider) async {
     try {
+      final token = storage.read(key: 'token');
       final response = await http.post(
         Uri.parse('$baseUrl/providers'),
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
         },
         body: jsonEncode(provider.toJson()),
       );
@@ -82,10 +91,12 @@ class ProviderService extends BaseService {
 
   Future<bool> deleteProvider(int id) async {
     try {
+      final token = storage.read(key: 'token');
       final response = await http.delete(
         Uri.parse('$baseUrl/providers/$id'),
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
         },
       );
 

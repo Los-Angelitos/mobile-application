@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import '../../IAM/infrastructure/auth/auth_service.dart';
 import '../models/provider.dart';
@@ -20,15 +21,16 @@ class _ProvidersViewState extends State<ProvidersView> {
   final ProviderService _providerService = ProviderService();
   final AuthService _authService = AuthService();
   List<Provider> _providers = [];
+  final TokenHelper _tokenHelper = TokenHelper();
   bool _loading = true;
-
+  late Future<bool> _fetchProvidersCall;
   @override
   void initState() {
     super.initState();
-    _fetchProviders();
+    _fetchProvidersCall = _fetchProviders();
   }
 
-  Future<String?> getHotelIdFromToken() async {
+  /* Future<String?> getHotelIdFromToken() async {
     try {
       final token = await _authService.storage.read(key: 'token');
       if (token == null) {
@@ -127,16 +129,16 @@ class _ProvidersViewState extends State<ProvidersView> {
       print('Error getting role from token: $e');
       return null;
     }
-  }
+  } */
 
-  Future<void> _fetchProviders() async {
-    final hotelId = await getHotelIdFromToken();
+  Future<bool> _fetchProviders() async {
+    final hotelId = await _tokenHelper.getLocality();
     if (hotelId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No se pudo obtener el hotelId del token')),
       );
       setState(() => _loading = false);
-      return;
+      return false;
     }
 
     final result = await _providerService.getProvidersByHotelId(hotelId);
@@ -144,6 +146,7 @@ class _ProvidersViewState extends State<ProvidersView> {
       _providers = result.where((p) => p.state.toLowerCase() == 'active').toList();
       _loading = false;
     });
+    return true;
   }
 
   void _showDetails(Provider provider) {
@@ -152,7 +155,7 @@ class _ProvidersViewState extends State<ProvidersView> {
       builder: (_) => AlertDialog(
         title: Column(
           children: [
-            CircleAvatar(
+            const CircleAvatar(
               radius: 50,
               backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=1'),
             ),
@@ -190,36 +193,71 @@ class _ProvidersViewState extends State<ProvidersView> {
 
   @override
   Widget build(BuildContext context) {
-    return BaseLayout(role: '', childScreen: getContentBuild(context));
+    
+    return FutureBuilder(
+      future: _fetchProvidersCall, 
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasData) {
+            return BaseLayout(role: "ROLE_OWNER", childScreen: getContentBuild(context));
+        }
+
+        return const Center(child: Text('Unable to get information', textAlign: TextAlign.center,));
+      }
+    );
   }
 
   Widget getContentBuild(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Providers'),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-        padding: const EdgeInsets.all(12),
-        child: GridView.builder(
-          itemCount: _providers.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.8,
-          ),
-          itemBuilder: (context, index) {
-            final provider = _providers[index];
-            return ProviderCard(
-              provider: provider,
-              onDetailsPressed: () => _showDetails(provider),
-              onDeletePressed: () => _deleteProvider(provider),
-            );
-          },
-        ),
-      ),
-    );
-  }
+  return Scaffold(
+    body: _loading
+        ? const Center(child: CircularProgressIndicator())
+        : _providers.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'No hay proveedores para mostrar.',
+                      style: TextStyle(fontSize: 18),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _loading = true;
+                          _fetchProvidersCall = _fetchProviders(); // Refresh data
+                        });
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Recargar'),
+                    ),
+                  ],
+                ),
+              )
+            : Padding(
+                padding: const EdgeInsets.all(12),
+                child: GridView.builder(
+                  itemCount: _providers.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.8,
+                  ),
+                  itemBuilder: (context, index) {
+                    final provider = _providers[index];
+                    return ProviderCard(
+                      provider: provider,
+                      onDetailsPressed: () => _showDetails(provider),
+                      onDeletePressed: () => _deleteProvider(provider),
+                    );
+                  },
+                ),
+              ),
+  );
+}
 }
