@@ -123,6 +123,13 @@ class BaseLayout extends StatelessWidget {
     } else if (role == 'ROLE_GUEST') {
       return [
         ListTile(
+          leading: const Icon(Icons.home),
+          title: const Text('Home'),
+          onTap: () {
+            Navigator.pushNamed(context, '/main');
+          },
+        ),
+        ListTile(
           leading: const Icon(Icons.person),
           title: const Text('My Reservations'),
           onTap: () {
