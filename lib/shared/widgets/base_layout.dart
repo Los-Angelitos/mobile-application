@@ -39,11 +39,6 @@ class BaseLayout extends StatelessWidget {
         ),
       ),
       body: childScreen
-
-      /* SingleChildScrollView(
-        reverse: true,
-        child: childScreen,
-      ) */
     );
   }
 
@@ -51,7 +46,7 @@ class BaseLayout extends StatelessWidget {
     if (role == '') {
       return [
         ListTile(
-          leading: const Icon(Icons.not_accessible),
+          leading: const Icon(Icons.stop),
           title: const Text('No current Routes for now'),
           subtitle: const Text('Login First :)'),
           onTap: () {},
@@ -63,6 +58,13 @@ class BaseLayout extends StatelessWidget {
       return [
         ListTile(
           leading: const Icon(Icons.dashboard),
+          title: const Text('Organization Overview'),
+          onTap: () {
+            Navigator.pushNamed(context, '/hotel/overview');
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.group),
           title: const Text('Organization Members'),
           onTap: () {
             Navigator.pushNamed(context, '/organization');
@@ -97,7 +99,7 @@ class BaseLayout extends StatelessWidget {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.person),
+          leading: const Icon(Icons.verified_user),
           title: const Text('Profile Account'),
           onTap: () {
             Navigator.pushNamed(context, '/profile/account');

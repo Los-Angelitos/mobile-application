@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/Commerce/views/subscription_plans.dart';
+import 'package:sweetmanager/IAM/views/advice_set_up.dart';
 import 'package:sweetmanager/IAM/views/authscreen.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
 import 'package:sweetmanager/OrganizationalManagement/views/main_page.dart';
@@ -40,13 +41,14 @@ class MyApp extends StatelessWidget {
         '/organization': (context) => const OrganizationPage(),
         '/signup': (context) => const AuthScreen(),
         '/providers': (context) => const ProvidersView(),
-        '/hotel/overview': (context) => const HotelDetailView(),
         '/bookings': (context) => BaseLayout(
           role: 'guest',
           childScreen: const ReservationsView(),
         ),
         '/subscriptions': (context) => const SubscriptionPlans(),
         '/main': (context) => const HomeScreen(),
+        '/hotel/overview': (context) => const HotelOverview(),
+        '/advice': (context) => const AdviceSetupView()
         /*'/dashboard': (context) => const DashboardScreen(),
         // '/dashboard': (context) => const DashboardScreen(),
         '/login': (context) => const LogInScreen(),
