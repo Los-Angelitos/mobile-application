@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:typed_data';
+import 'package:sweetmanager/OrganizationalManagement/services/multimedia_service.dart';
+// Import your Cloudinary service
+import 'package:sweetmanager/shared/infrastructure/services/cloudinary_service.dart';
 
 class HotelSetupReviewScreen extends StatefulWidget {
   const HotelSetupReviewScreen({super.key});
@@ -14,16 +17,35 @@ class HotelSetupReviewScreen extends StatefulWidget {
 
 class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
   final ImagePicker _picker = ImagePicker();
+  late final CloudinaryService cloudinaryService;
+  final MultimediaService _multimediaService = MultimediaService();
+
+  // Mobile file storage
   File? _logoImage;
   File? _mainImage;
   File? _roomImage;
   File? _poolImage;
   
-  // For web compatibility
+  // Web bytes storage
   Uint8List? _logoImageBytes;
   Uint8List? _mainImageBytes;
   Uint8List? _roomImageBytes;
   Uint8List? _poolImageBytes;
+
+  // XFile storage for Cloudinary upload
+  XFile? _logoXFile;
+  XFile? _mainXFile;
+  XFile? _roomXFile;
+  XFile? _poolXFile;
+
+  // Upload states
+  bool _isUploadingImages = false;
+  Map<String, String?> _uploadedImageUrls = {
+    'logo': null,
+    'main': null,
+    'room': null,
+    'pool': null,
+  };
 
   // Constants
   static const Color _primaryBlue = Color(0xFF1976D2);
@@ -33,6 +55,12 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
   static const Color _borderColor = Color(0xFFE0E0E0);
   static const Color _tealColor = Color(0xFF00695C);
   static const double _borderRadius = 12.0;
+
+  @override
+  void initState() {
+    super.initState();
+    cloudinaryService = CloudinaryService();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,10 +145,10 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
   }
 
   Widget _buildHeader() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Everything ready?',
           style: TextStyle(
             fontSize: 28,
@@ -128,8 +156,8 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
             color: _textColor,
           ),
         ),
-        const SizedBox(height: 12),
-        const Text(
+        SizedBox(height: 12),
+        Text(
           'Choose and upload a photo of your hotel so it can\nbe found by the entire SweetManager community.',
           style: TextStyle(
             fontSize: 16,
@@ -168,9 +196,9 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: _logoImage != null ? Colors.transparent : _tealColor,
+              color: _hasLogoImage() ? Colors.transparent : _tealColor,
               shape: BoxShape.circle,
-              border: _logoImage != null 
+              border: _hasLogoImage() 
                   ? Border.all(color: _primaryBlue, width: 2)
                   : null,
               boxShadow: [
@@ -181,31 +209,16 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
                 ),
               ],
             ),
-            child: _logoImage != null
+            child: _hasLogoImage()
                 ? ClipOval(
                     child: Stack(
                       children: [
-                    Image.file(
-                      _logoImage!,
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
+                        _buildImageWidget(
+                          file: _logoImage,
+                          bytes: _logoImageBytes,
                           width: 120,
                           height: 120,
-                          decoration: const BoxDecoration(
-                            color: Colors.grey,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.error,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                        );
-                      },
-                    ),
+                        ),
                         Positioned(
                           top: 8,
                           right: 8,
@@ -225,16 +238,16 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
                       ],
                     ),
                   )
-                : Column(
+                : const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.add_photo_alternate_outlined,
                         size: 32,
                         color: Colors.white,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
+                      SizedBox(height: 8),
+                      Text(
                         'Add Logo',
                         style: TextStyle(
                           fontSize: 12,
@@ -252,11 +265,16 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
     );
   }
 
+  // Helper method to check if logo image exists
+  bool _hasLogoImage() {
+    return (kIsWeb && _logoImageBytes != null) || (!kIsWeb && _logoImage != null);
+  }
+
   Widget _buildHotelInfo() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Royal Decameron Punta Sal',
           style: TextStyle(
             fontSize: 20,
@@ -264,7 +282,7 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
             color: _textColor,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Text(
           'Av. Panamericana N, Punta Sal 24560',
           style: TextStyle(
@@ -273,8 +291,8 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
             fontWeight: FontWeight.w400,
           ),
         ),
-        const SizedBox(height: 16),
-        const Text(
+        SizedBox(height: 16),
+        Text(
           'We offer the most modern rooms in the country, from small to large, with beautiful ocean views and incredible service.',
           style: TextStyle(
             fontSize: 14,
@@ -293,13 +311,13 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-        _buildPhotoUpload(
-          image: _mainImage,
-          imageBytes: _mainImageBytes,
-          onTap: () => _pickImage(ImageType.main),
-          height: 100,
-          label: 'Main Hotel Photo',
-        ),
+          _buildPhotoUpload(
+            image: _mainImage,
+            imageBytes: _mainImageBytes,
+            onTap: () => _pickImage(ImageType.main),
+            height: 100,
+            label: 'Main Hotel Photo',
+          ),
           const SizedBox(height: 12),
           Flexible(
             child: Row(
@@ -405,14 +423,14 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
             color: _subtitleColor.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(
+          child: const Icon(
             Icons.add_photo_alternate_outlined,
             size: 16,
             color: _subtitleColor,
           ),
         ),
         const SizedBox(height: 6),
-        Text(
+        const Text(
           'Add Photo',
           style: TextStyle(
             fontSize: 10,
@@ -440,12 +458,8 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
 
   Widget _buildActionButtons() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(
-          flex: 1,
-          child: _buildBackButton(),
-        ),
-        const SizedBox(width: 16),
         Expanded(
           flex: 1,
           child: _buildFinishButton(),
@@ -454,36 +468,11 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
     );
   }
 
-  Widget _buildBackButton() {
-    return SizedBox(
-      height: 56,
-      child: OutlinedButton(
-        onPressed: _handleBack,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          side: const BorderSide(color: _borderColor, width: 1.5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          elevation: 0,
-        ),
-        child: const Text(
-          'Back',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: _textColor,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildFinishButton() {
     return SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: _handleFinish,
+        onPressed: _isUploadingImages ? null : _handleFinish,
         style: ElevatedButton.styleFrom(
           backgroundColor: _primaryBlue,
           foregroundColor: Colors.white,
@@ -492,13 +481,29 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
           ),
           elevation: 0,
         ),
-        child: const Text(
-          'Finish',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: _isUploadingImages
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text('Uploading...'),
+                ],
+              )
+            : const Text(
+                'Finish',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -506,14 +511,13 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
   // Image picker methods
   Future<void> _pickImage(ImageType type) async {
     try {
-      // Show image source selection dialog
       await _showImageSourceDialog(type);
     } catch (e) {
       _showErrorMessage('Failed to open image selector: ${e.toString()}');
     }
   }
 
-  Future<void> _pickImageFromSourceHotel(ImageSource source, ImageType type) async {
+  Future<void> _pickImageFromSource(ImageSource source, ImageType type) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
@@ -532,18 +536,22 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
               case ImageType.logo:
                 _logoImageBytes = imageBytes;
                 _logoImage = null;
+                _logoXFile = pickedFile;
                 break;
               case ImageType.main:
                 _mainImageBytes = imageBytes;
                 _mainImage = null;
+                _mainXFile = pickedFile;
                 break;
               case ImageType.room:
                 _roomImageBytes = imageBytes;
                 _roomImage = null;
+                _roomXFile = pickedFile;
                 break;
               case ImageType.pool:
                 _poolImageBytes = imageBytes;
                 _poolImage = null;
+                _poolXFile = pickedFile;
                 break;
             }
           });
@@ -559,18 +567,22 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
                 case ImageType.logo:
                   _logoImage = imageFile;
                   _logoImageBytes = null;
+                  _logoXFile = pickedFile;
                   break;
                 case ImageType.main:
                   _mainImage = imageFile;
                   _mainImageBytes = null;
+                  _mainXFile = pickedFile;
                   break;
                 case ImageType.room:
                   _roomImage = imageFile;
                   _roomImageBytes = null;
+                  _roomXFile = pickedFile;
                   break;
                 case ImageType.pool:
                   _poolImage = imageFile;
                   _poolImageBytes = null;
+                  _poolXFile = pickedFile;
                   break;
               }
             });
@@ -628,19 +640,21 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
                 subtitle: 'Choose from your photos',
                 onTap: () {
                   Navigator.pop(context);
-                  _pickImageFromSourceHotel(ImageSource.gallery, type);
+                  _pickImageFromSource(ImageSource.gallery, type);
                 },
               ),
-              const SizedBox(height: 16),
-              _buildImageSourceOption(
-                icon: Icons.camera_alt,
-                title: 'Camera',
-                subtitle: 'Take a new photo',
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImageFromSourceHotel(ImageSource.camera, type);
-                },
-              ),
+              if (!kIsWeb) ...[
+                const SizedBox(height: 16),
+                _buildImageSourceOption(
+                  icon: Icons.camera_alt,
+                  title: 'Camera',
+                  subtitle: 'Take a new photo',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImageFromSource(ImageSource.camera, type);
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -688,7 +702,7 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
                   ),
                   Text(
                     subtitle,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: _subtitleColor,
                     ),
@@ -702,61 +716,82 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
     );
   }
 
-  Future<void> _pickImageFromSource(ImageSource source, ImageType type) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 85,
-        preferredCameraDevice: CameraDevice.rear,
-      );
+  // Cloudinary upload methods
+  Future<void> _uploadImagesToCloudinary() async {
+    setState(() {
+      _isUploadingImages = true;
+    });
 
-      if (pickedFile != null) {
-        // Verify the file exists and is readable
-        final File imageFile = File(pickedFile.path);
-        if (await imageFile.exists()) {
-          // Try to read the file to ensure it's valid
-          await imageFile.readAsBytes();
-          
-          setState(() {
-            switch (type) {
-              case ImageType.logo:
-                _logoImage = imageFile;
-                break;
-              case ImageType.main:
-                _mainImage = imageFile;
-                break;
-              case ImageType.room:
-                _roomImage = imageFile;
-                break;
-              case ImageType.pool:
-                _poolImage = imageFile;
-                break;
-            }
-          });
-        } else {
-          _showErrorMessage('Selected image file is not accessible');
-        }
+    try {
+      // Upload each image if it exists
+      if (_logoXFile != null) {
+        _uploadedImageUrls['logo'] = await _uploadSingleImage(
+          _logoXFile!,
+          'logo',
+          _logoImageBytes,
+        );
       }
-    } on PlatformException catch (e) {
-      String errorMessage;
-      switch (e.code) {
-        case 'photo_access_denied':
-          errorMessage = 'Photo access denied. Please grant permission in device settings.';
-          break;
-        case 'camera_access_denied':
-          errorMessage = 'Camera access denied. Please grant permission in device settings.';
-          break;
-        case 'invalid_image':
-          errorMessage = 'The selected file is not a valid image.';
-          break;
-        default:
-          errorMessage = 'Failed to pick image: ${e.message ?? e.code}';
+
+      if (_mainXFile != null) {
+        _uploadedImageUrls['main'] = await _uploadSingleImage(
+          _mainXFile!,
+          'main',
+          _mainImageBytes,
+        );
       }
-      _showErrorMessage(errorMessage);
+
+      if (_roomXFile != null) {
+        _uploadedImageUrls['room'] = await _uploadSingleImage(
+          _roomXFile!,
+          'room',
+          _roomImageBytes,
+        );
+      }
+
+      if (_poolXFile != null) {
+        _uploadedImageUrls['pool'] = await _uploadSingleImage(
+          _poolXFile!,
+          'pool',
+          _poolImageBytes,
+        );
+      }
+
+      print('All images uploaded successfully!');
+      print('Uploaded URLs: $_uploadedImageUrls');
+
     } catch (e) {
-      _showErrorMessage('An unexpected error occurred: ${e.toString()}');
+      print('Error uploading images: $e');
+      _showErrorMessage('Failed to upload images: ${e.toString()}');
+      return;
+    } finally {
+      setState(() {
+        _isUploadingImages = false;
+      });
+    }
+  }
+
+  Future<String> _uploadSingleImage(
+    XFile imageFile,
+    String imageType,
+    Uint8List? webBytes,
+  ) async {
+    try {
+      final imageUrl = await cloudinaryService.uploadImage(
+        imageFile,
+        folder: 'hotel_setup',
+        webImageBytes: webBytes,
+        publicId: 'hotel_${imageType}_${DateTime.now().millisecondsSinceEpoch}',
+        tags: ['hotel', 'setup', imageType],
+      );
+      
+      print('$imageType image uploaded: $imageUrl');
+      return imageUrl;
+    } on CloudinaryException catch (e) {
+      print('Cloudinary error uploading $imageType: $e');
+      throw Exception('Failed to upload $imageType image: ${e.message}');
+    } catch (e) {
+      print('Error uploading $imageType image: $e');
+      throw Exception('Failed to upload $imageType image: $e');
     }
   }
 
@@ -771,37 +806,52 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
 
   void _handleFinish() {
     final hasMainImage = _mainImage != null || _mainImageBytes != null;
-    if (!hasMainImage) {
-      _showErrorMessage('Please add at least a main hotel photo');
+    final hasPoolImage = _poolImage != null || _poolImageBytes != null;
+    final hasRoomImage = _roomImage != null || _roomImageBytes != null;
+    final hasLogoImage = _logoImage != null || _logoImageBytes != null;
+    if (!hasMainImage || !hasPoolImage || !hasRoomImage || !hasLogoImage) {
+      _showErrorMessage('Please ensure to upload all the photos.');
       return;
     }
 
     _processHotelSetup();
   }
 
-  void _processHotelSetup() {
-    final hotelSetup = {
-      'logoImage': _logoImage?.path,
-      'mainImage': _mainImage?.path,
-      'roomImage': _roomImage?.path,
-      'poolImage': _poolImage?.path,
-      'completedAt': DateTime.now().toIso8601String(),
-    };
+  Future<void> _processHotelSetup() async {
+    // First upload images to Cloudinary
+    await _uploadImagesToCloudinary();
 
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: _primaryBlue),
-      ),
-    );
+    // Only proceed if upload was successful (no error state)
+    if (!_isUploadingImages) {
+      final hotelSetup = {
+        'logoImageUrl': _uploadedImageUrls['logo'],
+        'mainImageUrl': _uploadedImageUrls['main'],
+        'roomImageUrl': _uploadedImageUrls['room'],
+        'poolImageUrl': _uploadedImageUrls['pool'],
+        'completedAt': DateTime.now().toIso8601String(),
+      };
 
-    // Simulate API call for hotel setup completion
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.pop(context); // Close loading dialog
-      _showSuccessDialog(hotelSetup);
-    });
+      // Store the returned urls from cloudinary
+      await _multimediaService.registerMultimedia(hotelSetup['logoImageUrl']!, "LOGO", 0);
+      await _multimediaService.registerMultimedia(hotelSetup['mainImageUrl']!, "MAIN", 1);
+      await _multimediaService.registerMultimedia(hotelSetup['mainImageUrl']!, "DETAIL", 2);
+      await _multimediaService.registerMultimedia(hotelSetup['mainImageUrl']!, "DETAIL", 3);
+
+      // Show loading indicator for processing
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: _primaryBlue),
+        ),
+      );
+
+      // Simulate API call for hotel setup completion
+      Future.delayed(const Duration(seconds: 2), () {
+        Navigator.pop(context); // Close loading dialog
+        _showSuccessDialog(hotelSetup);
+      });
+    }
   }
 
   void _showSuccessDialog(Map<String, dynamic> hotelSetup) {
