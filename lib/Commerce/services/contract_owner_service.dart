@@ -4,7 +4,7 @@ import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import 'package:http/http.dart' as http;
 
 class ContractOwnerService extends BaseService {
-  Future<bool> registerContractOwner(int subscriptionId) async{
+  Future<bool> registerContractOwner(int subscriptionId) async {
     try{  
       final ownerId = await tokenHelper.getIdentity();
       final token = await storage.read(key: 'token');
