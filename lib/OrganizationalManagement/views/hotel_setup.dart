@@ -32,7 +32,7 @@ class _HotelSetupScreenState extends State<HotelSetupScreen> {
   @override
   void initState() {
     super.initState();
-    _inviteAdminController.text = 'mauwiwi@mono.com';
+    _inviteAdminController.text = 'admin.jose@gmail.com';
   }
 
   @override
