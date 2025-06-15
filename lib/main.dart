@@ -3,6 +3,9 @@ import 'package:sweetmanager/Commerce/views/subscription_plans.dart';
 import 'package:sweetmanager/IAM/views/advice_set_up.dart';
 import 'package:sweetmanager/IAM/views/authscreen.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/hotel_register.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/hotel_setup.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/hotel_setup_review.dart';
 import 'package:sweetmanager/OrganizationalManagement/views/main_page.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_account.dart';
@@ -48,7 +51,10 @@ class MyApp extends StatelessWidget {
         '/subscriptions': (context) => const SubscriptionPlans(),
         '/main': (context) => const HomeScreen(),
         '/hotel/overview': (context) => const HotelOverview(),
-        '/advice': (context) => const AdviceSetupView()
+        '/advice': (context) => const AdviceSetupView(),
+        '/hotel/register': (context) => const HotelRegistrationScreen(),
+        '/hotel/set-up': (context) => const HotelSetupScreen(),
+        '/hotel/set-up/review': (context) => const HotelSetupReviewScreen()
         /*'/dashboard': (context) => const DashboardScreen(),
         // '/dashboard': (context) => const DashboardScreen(),
         '/login': (context) => const LogInScreen(),
