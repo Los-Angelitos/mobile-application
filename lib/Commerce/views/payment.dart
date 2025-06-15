@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sweetmanager/Commerce/services/contract_owner_service.dart';
+import 'package:sweetmanager/Commerce/services/payment_service.dart';
 
 class PaymentCheckoutScreen extends StatefulWidget {
   const PaymentCheckoutScreen({super.key, required this.cardIdentifier});
@@ -14,19 +16,18 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
   final TextEditingController _cardNumberController = TextEditingController();
   final TextEditingController _expirationController = TextEditingController();
   final TextEditingController _cvvController = TextEditingController();
-  
+  final ContractOwnerService _contractOwnerService = ContractOwnerService();
+  final PaymentService _paymentService = PaymentService();
   final FocusNode _cardNumberFocus = FocusNode();
   final FocusNode _expirationFocus = FocusNode();
   final FocusNode _cvvFocus = FocusNode();
 
   late int cardIdentifier;
+  bool _isProcessingPayment = false; // Add loading state
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize the cardIdentifier from widget's constructor
-
     cardIdentifier = widget.cardIdentifier;
   }
 
@@ -116,156 +117,72 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
   }
 
   Widget _buildPlanHeader() {
-    if (cardIdentifier == 1) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'PLAN BASICO',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Total \$.29.99',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
-          Image.asset(
-            'assets/images/niubiz_logo.png', // You'll need to add this asset
-            height: 24,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'niubiz',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black54,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      );
+    String planName;
+    String totalAmount;
+    
+    switch (cardIdentifier) {
+      case 1:
+        planName = 'PLAN BASICO';
+        totalAmount = 'Total \$29.99';
+        break;
+      case 2:
+        planName = 'PLAN REGULAR';
+        totalAmount = 'Total \$58.99';
+        break;
+      default:
+        planName = 'PLAN PREMIUM';
+        totalAmount = 'Total \$110.69';
+        break;
     }
-    else if (cardIdentifier == 2) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'PLAN REGULAR',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              planName,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Total \$.58.99',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w400,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              totalAmount,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w400,
               ),
-            ],
-          ),
-          Image.asset(
-            'assets/images/niubiz_logo.png', // You'll need to add this asset
-            height: 24,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'niubiz',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black54,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      );
-    } 
-    else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'PLAN PREMIUM',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
+            ),
+          ],
+        ),
+        Image.asset(
+          'assets/images/niubiz_logo.png',
+          height: 24,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(4),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Total \$.110.69',
+              child: const Text(
+                'niubiz',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w400,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
                 ),
               ),
-            ],
-          ),
-          Image.asset(
-            'assets/images/niubiz_logo.png', // You'll need to add this asset
-            height: 24,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'niubiz',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black54,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      );
-    }
+            );
+          },
+        ),
+      ],
+    );
   }
 
   Widget _buildCreditCardIcon() {
@@ -361,6 +278,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
         controller: _cardNumberController,
         focusNode: _cardNumberFocus,
         keyboardType: TextInputType.number,
+        enabled: !_isProcessingPayment,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           _CardNumberInputFormatter(),
@@ -387,6 +305,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
         controller: _expirationController,
         focusNode: _expirationFocus,
         keyboardType: TextInputType.number,
+        enabled: !_isProcessingPayment,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           _ExpirationDateInputFormatter(),
@@ -414,6 +333,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
         focusNode: _cvvFocus,
         keyboardType: TextInputType.number,
         obscureText: true,
+        enabled: !_isProcessingPayment,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(4),
@@ -433,9 +353,9 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _handlePayment,
+        onPressed: _isProcessingPayment ? null : _handlePayment,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _primaryBlue,
+          backgroundColor: _isProcessingPayment ? Colors.grey : _primaryBlue,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
@@ -443,19 +363,45 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
           ),
           elevation: 0,
         ),
-        child: const Text(
-          'PAY',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-          ),
-        ),
+        child: _isProcessingPayment
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'PROCESSING...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              )
+            : const Text(
+                'PAY',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.2,
+                ),
+              ),
       ),
     );
   }
 
   void _handlePayment() {
+    // Prevent multiple taps
+    if (_isProcessingPayment) return;
+    
     // Validate form
     if (!_validateForm()) return;
 
@@ -486,36 +432,80 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
     return true;
   }
 
-  void _processPayment() {
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: _primaryBlue),
-      ),
-    );
-
-    // Simulate payment processing
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pop(context); // Close loading dialog
-      _showSuccessMessage();
+  Future<void> _processPayment() async {
+    setState(() {
+      _isProcessingPayment = true;
     });
+
+    try {
+      // Calculate amount based on plan
+      double amount;
+      switch (cardIdentifier) {
+        case 1:
+          amount = 29.99;
+          break;
+        case 2:
+          amount = 58.99;
+          break;
+        default:
+          amount = 110.69;
+          break;
+      }
+
+      final today = DateTime.now();
+      final description = 'CONTRACT - ${today.day}/${today.month}/${today.year}';
+
+      print('Starting payment process...');
+      print('Amount: \$${amount.toStringAsFixed(2)}');
+      print('Description: $description');
+
+      // Register contract owner
+      print('Registering contract owner...');
+      await _contractOwnerService.registerContractOwner(cardIdentifier);
+      print('Contract owner registered successfully');
+
+      // Register payment
+      print('Registering payment...');
+      await _paymentService.registerPaymentOwner(description, amount.toInt());
+      print('Payment registered successfully');
+
+      // Show success message
+      if (mounted) {
+        _showSuccessMessage();
+      }
+    } catch (e) {
+      print('Payment processing error: $e');
+      if (mounted) {
+        _showErrorMessage('Payment failed: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingPayment = false;
+        });
+      }
+    }
   }
 
   void _showErrorMessage(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red[600],
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
       ),
     );
   }
 
   void _showSuccessMessage() {
+    if (!mounted) return;
+    
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         icon: const Icon(
           Icons.check_circle,
@@ -527,9 +517,12 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              // Navigate to success page or back
-              Navigator.pushNamed(context, '/hotel/register');
+              Navigator.pop(context); // Close dialog
+              // Navigate to hotel register or back to previous screen
+              Navigator.pushNamed(context, '/hotel/register').catchError((error) {
+                // If route doesn't exist, just go back
+                Navigator.pop(context);
+              });
             },
             child: const Text('OK'),
           ),
