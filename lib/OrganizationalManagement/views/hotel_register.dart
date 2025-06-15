@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/IAM/infrastructure/auth/auth_service.dart';
+import 'package:sweetmanager/OrganizationalManagement/services/hotel_service.dart';
 
 class HotelRegistrationScreen extends StatefulWidget {
   const HotelRegistrationScreen({super.key});
@@ -13,7 +15,8 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-
+  final HotelService _hotelService = HotelService();
+  final AuthService _authService = AuthService();
   final FocusNode _hotelNameFocus = FocusNode();
   final FocusNode _addressFocus = FocusNode();
   final FocusNode _emailFocus = FocusNode();
@@ -21,6 +24,7 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
   final FocusNode _descriptionFocus = FocusNode();
 
   String? _selectedHotelType;
+  bool _isProcessingRegistration = false; // Add loading state
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -124,7 +128,7 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
                 child: Text(type),
               );
             }).toList(),
-            onChanged: (String? newValue) {
+            onChanged: _isProcessingRegistration ? null : (String? newValue) {
               setState(() {
                 _selectedHotelType = newValue;
               });
@@ -271,6 +275,7 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
             textInputAction: textInputAction,
             maxLines: maxLines,
             validator: validator,
+            enabled: !_isProcessingRegistration,
             style: const TextStyle(
               fontSize: 16,
               color: _textColor,
@@ -315,22 +320,45 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
     return SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: _handleContinue,
+        onPressed: _isProcessingRegistration ? null : _handleContinue,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _primaryBlue,
+          backgroundColor: _isProcessingRegistration ? Colors.grey : _primaryBlue,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_borderRadius),
           ),
           elevation: 0,
         ),
-        child: const Text(
-          'Continue',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: _isProcessingRegistration
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Registering...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              )
+            : const Text(
+                'Continue',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -357,8 +385,10 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
   }
 
   // Action handlers
-
   void _handleContinue() {
+    // Prevent multiple taps
+    if (_isProcessingRegistration) return;
+    
     if (!_formKey.currentState!.validate()) {
       _showErrorMessage('Please fill in all required fields correctly');
       return;
@@ -368,35 +398,67 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
     _processHotelRegistration();
   }
 
-  void _processHotelRegistration() {
-    final hotelData = {
-      'hotelName': _hotelNameController.text.trim(),
-      'address': _addressController.text.trim(),
-      'email': _emailController.text.trim(),
-      'phone': _phoneController.text.trim(),
-      'hotelType': _selectedHotelType ?? '',
-      'description': _descriptionController.text.trim(),
-    };
+  String formatToEnum(String input) {
+    return input.toUpperCase().replaceAll(' ', '_');
+  }
 
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: _primaryBlue),
-      ),
-    );
-
-    // Simulate API call
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pop(context); // Close loading dialog
-      _showSuccessDialog(hotelData);
+  Future<void> _processHotelRegistration() async {
+    setState(() {
+      _isProcessingRegistration = true;
     });
+
+    try {
+      final hotelData = {
+        'hotelName': _hotelNameController.text.trim(),
+        'address': _addressController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'hotelType': _selectedHotelType ?? '',
+        'description': _descriptionController.text.trim(),
+      };
+
+      print('Starting hotel registration...');
+      print('Hotel Data: $hotelData');
+
+      var hotelTypeConverted = hotelData['hotelType']!.toUpperCase().replaceAll(' ', '_');
+      // Register the hotel
+      await _hotelService.registerHotel(
+        hotelData['hotelName']!, 
+        hotelData['description']!, 
+        hotelData['email']!, 
+        hotelData['address']!, 
+        hotelData['phone']!, 
+        hotelTypeConverted
+      );
+
+      print('Hotel registration completed successfully');
+
+      await _authService.refreshSession();
+
+      // Show success dialog
+      if (mounted) {
+        _showSuccessDialog(hotelData);
+      }
+    } catch (e) {
+      print('Hotel registration error: $e');
+      if (mounted) {
+        _showErrorMessage('Registration failed: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingRegistration = false;
+        });
+      }
+    }
   }
 
   void _showSuccessDialog(Map<String, String> hotelData) {
+    if (!mounted) return;
+    
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         icon: const Icon(
           Icons.check_circle,
@@ -410,8 +472,7 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              // Navigate to next screen or dashboard
+              Navigator.pop(context); // Close dialog
               _navigateToNextScreen();
             },
             child: const Text('Continue'),
@@ -423,27 +484,22 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
 
   void _navigateToNextScreen() {
     // Replace with your actual navigation logic
-    Navigator.pushReplacementNamed(context, '/hotel/set-up');
+    Navigator.pushReplacementNamed(context, '/hotel/set-up').catchError((error) {
+      // If route doesn't exist, show error or navigate to a default route
+      _showErrorMessage('Navigation error: Unable to proceed to next screen');
+    });
   }
 
   void _showErrorMessage(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red[600],
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
-
-  void _showInfoMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.blue[600],
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
