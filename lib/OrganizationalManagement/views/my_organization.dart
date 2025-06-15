@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:sweetmanager/IAM/infrastructure/auth/profile_service.dart';
 import 'dart:convert';
-import '../services/hotel_service.dart';
 import '../widgets/organization_card.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
@@ -13,7 +13,7 @@ class OrganizationPage extends StatefulWidget {
 }
 
 class _OrganizationPageState extends State<OrganizationPage> {
-  final HotelService _organizationService = HotelService();
+  final ProfileService _profileService = ProfileService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Map<String, dynamic>? currentUser;
@@ -59,7 +59,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
   Future<void> _checkSessionAndLoadUser() async {
     try {
       // Verificar si hay una sesión activa
-      final hasSession = await _organizationService.hasActiveSession();
+      final hasSession = await _profileService.hasActiveSession();
 
       if (!hasSession) {
         setState(() {
@@ -72,7 +72,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
       // Extraer el rol del token si no se ha cargado aún
       if (userRole == null || userRole!.isEmpty) {
-        userRole = await _organizationService.getUserRoleFromToken();
+        userRole = await _profileService.getUserRoleFromToken();
       }
 
       await _loadCurrentUser();
@@ -100,12 +100,12 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
       // Cargar el usuario basado en su rol
       if (userRole?.contains('GUEST') == true) {
-        response = await _organizationService.getCurrentGuest();
+        response = await _profileService.getCurrentGuest();
       } else if (userRole?.contains('OWNER') == true) {
-        response = await _organizationService.getCurrentOwner();
+        response = await _profileService.getCurrentOwner();
       } else {
         // Por defecto, intentar cargar como guest
-        response = await _organizationService.getCurrentGuest();
+        response = await _profileService.getCurrentGuest();
       }
 
       if (response != null) {
@@ -197,11 +197,11 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
       bool success;
       if (userRole?.contains('GUEST') == true) {
-        success = await _organizationService.updateCurrentGuest(updatedData);
+        success = await _profileService.updateCurrentGuest(updatedData);
       } else if (userRole?.contains('OWNER') == true) {
-        success = await _organizationService.updateCurrentOwner(updatedData);
+        success = await _profileService.updateCurrentOwner(updatedData);
       } else {
-        success = await _organizationService.updateCurrentGuest(updatedData);
+        success = await _profileService.updateCurrentGuest(updatedData);
       }
 
       if (success) {
