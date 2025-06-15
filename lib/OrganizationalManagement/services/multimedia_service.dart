@@ -138,14 +138,14 @@ class MultimediaService extends BaseService {
   Future<bool> registerMultimedia(String url, String type, int position) async {
     try {
       // Don't forget to refresh token after completing the hotel set up
-      final hotelId = tokenHelper.getLocality();
+      final hotelId = await tokenHelper.getLocality();
       final response = await http.post(Uri.parse('$baseUrl/multimedia'), headers: await _getAuthHeaders(),
-      body: {
+      body: jsonEncode({
         'hotelId': hotelId,
         'url': url,
         'type': type,
         'position': position
-      });
+      }));
 
       if (response.statusCode == 200) {
         return true;

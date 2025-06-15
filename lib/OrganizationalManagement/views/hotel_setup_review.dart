@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sweetmanager/OrganizationalManagement/services/multimedia_service.dart';
@@ -39,7 +38,7 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
   XFile? _poolXFile;
 
   // Upload states
-  bool _isUploadingImages = false;
+  bool _isProcessingSetup = false; // Renamed for clarity
   Map<String, String?> _uploadedImageUrls = {
     'logo': null,
     'main': null,
@@ -191,7 +190,7 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
     return Column(
       children: [
         GestureDetector(
-          onTap: () => _pickImage(ImageType.logo),
+          onTap: _isProcessingSetup ? null : () => _pickImage(ImageType.logo),
           child: Container(
             width: 120,
             height: 120,
@@ -359,7 +358,7 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
     final hasImage = image != null || imageBytes != null;
     
     return GestureDetector(
-      onTap: onTap,
+      onTap: _isProcessingSetup ? null : onTap,
       child: Container(
         width: double.infinity,
         height: height,
@@ -472,16 +471,16 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
     return SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: _isUploadingImages ? null : _handleFinish,
+        onPressed: _isProcessingSetup ? null : _handleFinish,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _primaryBlue,
+          backgroundColor: _isProcessingSetup ? Colors.grey : _primaryBlue,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.0),
           ),
           elevation: 0,
         ),
-        child: _isUploadingImages
+        child: _isProcessingSetup
             ? const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -494,7 +493,13 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
                     ),
                   ),
                   SizedBox(width: 8),
-                  Text('Uploading...'),
+                  Text(
+                    'Processing...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               )
             : const Text(
@@ -718,55 +723,56 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
 
   // Cloudinary upload methods
   Future<void> _uploadImagesToCloudinary() async {
-    setState(() {
-      _isUploadingImages = true;
-    });
+    print('Starting Cloudinary uploads...');
 
     try {
       // Upload each image if it exists
       if (_logoXFile != null) {
+        print('Uploading logo image...');
         _uploadedImageUrls['logo'] = await _uploadSingleImage(
           _logoXFile!,
           'logo',
           _logoImageBytes,
         );
+        print('Logo uploaded successfully: ${_uploadedImageUrls['logo']}');
       }
 
       if (_mainXFile != null) {
+        print('Uploading main image...');
         _uploadedImageUrls['main'] = await _uploadSingleImage(
           _mainXFile!,
           'main',
           _mainImageBytes,
         );
+        print('Main image uploaded successfully: ${_uploadedImageUrls['main']}');
       }
 
       if (_roomXFile != null) {
+        print('Uploading room image...');
         _uploadedImageUrls['room'] = await _uploadSingleImage(
           _roomXFile!,
           'room',
           _roomImageBytes,
         );
+        print('Room image uploaded successfully: ${_uploadedImageUrls['room']}');
       }
 
       if (_poolXFile != null) {
+        print('Uploading pool image...');
         _uploadedImageUrls['pool'] = await _uploadSingleImage(
           _poolXFile!,
           'pool',
           _poolImageBytes,
         );
+        print('Pool image uploaded successfully: ${_uploadedImageUrls['pool']}');
       }
 
       print('All images uploaded successfully!');
-      print('Uploaded URLs: $_uploadedImageUrls');
+      print('Final uploaded URLs: $_uploadedImageUrls');
 
     } catch (e) {
       print('Error uploading images: $e');
-      _showErrorMessage('Failed to upload images: ${e.toString()}');
-      return;
-    } finally {
-      setState(() {
-        _isUploadingImages = false;
-      });
+      throw Exception('Failed to upload images: ${e.toString()}');
     }
   }
 
@@ -784,7 +790,6 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
         tags: ['hotel', 'setup', imageType],
       );
       
-      print('$imageType image uploaded: $imageUrl');
       return imageUrl;
     } on CloudinaryException catch (e) {
       print('Cloudinary error uploading $imageType: $e');
@@ -805,10 +810,14 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
   }
 
   void _handleFinish() {
+    // Prevent multiple taps
+    if (_isProcessingSetup) return;
+    
     final hasMainImage = _mainImage != null || _mainImageBytes != null;
     final hasPoolImage = _poolImage != null || _poolImageBytes != null;
     final hasRoomImage = _roomImage != null || _roomImageBytes != null;
     final hasLogoImage = _logoImage != null || _logoImageBytes != null;
+    
     if (!hasMainImage || !hasPoolImage || !hasRoomImage || !hasLogoImage) {
       _showErrorMessage('Please ensure to upload all the photos.');
       return;
@@ -818,11 +827,22 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
   }
 
   Future<void> _processHotelSetup() async {
-    // First upload images to Cloudinary
-    await _uploadImagesToCloudinary();
+    setState(() {
+      _isProcessingSetup = true;
+    });
 
-    // Only proceed if upload was successful (no error state)
-    if (!_isUploadingImages) {
+    try {
+      print('Starting hotel setup process...');
+
+      // Step 1: Upload images to Cloudinary
+      print('Step 1: Uploading images to Cloudinary...');
+      await _uploadImagesToCloudinary();
+
+      // Step 2: Register multimedia with the service
+      print('Step 2: Registering multimedia...');
+      await _registerMultimedia();
+
+      // Step 3: Create final hotel setup data
       final hotelSetup = {
         'logoImageUrl': _uploadedImageUrls['logo'],
         'mainImageUrl': _uploadedImageUrls['main'],
@@ -831,30 +851,85 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
         'completedAt': DateTime.now().toIso8601String(),
       };
 
-      // Store the returned urls from cloudinary
-      await _multimediaService.registerMultimedia(hotelSetup['logoImageUrl']!, "LOGO", 0);
-      await _multimediaService.registerMultimedia(hotelSetup['mainImageUrl']!, "MAIN", 1);
-      await _multimediaService.registerMultimedia(hotelSetup['mainImageUrl']!, "DETAIL", 2);
-      await _multimediaService.registerMultimedia(hotelSetup['mainImageUrl']!, "DETAIL", 3);
+      print('Hotel setup completed successfully');
+      print('Final setup data: $hotelSetup');
 
-      // Show loading indicator for processing
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(color: _primaryBlue),
-        ),
-      );
-
-      // Simulate API call for hotel setup completion
-      Future.delayed(const Duration(seconds: 2), () {
-        Navigator.pop(context); // Close loading dialog
+      // Show success dialog
+      if (mounted) {
         _showSuccessDialog(hotelSetup);
-      });
+      }
+    } catch (e) {
+      print('Hotel setup processing error: $e');
+      if (mounted) {
+        _showErrorMessage('Failed to complete hotel setup: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessingSetup = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _registerMultimedia() async {
+    try {
+      print('Registering multimedia with service...');
+
+      // Register logo
+      if (_uploadedImageUrls['logo'] != null) {
+        print('Registering logo multimedia...');
+        await _multimediaService.registerMultimedia(
+          _uploadedImageUrls['logo']!,
+          "LOGO",
+          0
+        );
+        print('Logo multimedia registered successfully');
+      }
+
+      // Register main image
+      if (_uploadedImageUrls['main'] != null) {
+        print('Registering main image multimedia...');
+        await _multimediaService.registerMultimedia(
+          _uploadedImageUrls['main']!,
+          "MAIN",
+          1
+        );
+        print('Main image multimedia registered successfully');
+      }
+
+      // Register room image as detail
+      if (_uploadedImageUrls['room'] != null) {
+        print('Registering room image multimedia...');
+        await _multimediaService.registerMultimedia(
+          _uploadedImageUrls['room']!,
+          "DETAIL",
+          2
+        );
+        print('Room image multimedia registered successfully');
+      }
+
+      // Register pool image as detail
+      if (_uploadedImageUrls['pool'] != null) {
+        print('Registering pool image multimedia...');
+        await _multimediaService.registerMultimedia(
+          _uploadedImageUrls['pool']!,
+          "DETAIL",
+          3
+        );
+        print('Pool image multimedia registered successfully');
+      }
+
+      print('All multimedia registered successfully');
+    } catch (e) {
+      print('Error registering multimedia: $e');
+      throw Exception('Failed to register multimedia: ${e.toString()}');
     }
   }
 
   void _showSuccessDialog(Map<String, dynamic> hotelSetup) {
+    if (!mounted) return;
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -872,10 +947,10 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog
               _navigateToDashboard();
             },
-            child: const Text('Go to Dashboard'),
+            child: const Text('Go to Hotel Overview'),
           ),
         ],
       ),
@@ -888,27 +963,37 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
       context,
       '/hotel/overview',
       (route) => false,
-    );
+    ).catchError((error) {
+      print('Navigation error: $error');
+      // If route doesn't exist, show error or navigate to a default route
+      _showErrorMessage('Navigation error: Unable to reach dashboard');
+    });
   }
 
   void _showErrorMessage(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red[600],
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
 
   void _showInfoMessage(String message) {
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.blue[600],
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
       ),
     );
   }

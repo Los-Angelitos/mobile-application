@@ -131,7 +131,7 @@ class HotelService extends BaseService {
   Future<bool> registerHotel(String name, String description, String email, String address, String phone, String category) async {
     try{
       final token = await storage.read(key: 'token');
-      final ownerId = tokenHelper.getIdentity();
+      final ownerId = await tokenHelper.getIdentity();
       final response = await http.post(Uri.parse('$baseUrl/hotels'), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
