@@ -16,10 +16,9 @@ class SetupService extends BaseService {
         'price': price
       }));
 
-      final hotelId = await tokenHelper.getLocality();
       final responseJson = jsonDecode(responseTypeRoom.body);
-      
-      final responseRooms = await http.post(Uri.parse('/room/set-up'), headers: {
+      final hotelId = await tokenHelper.getLocality();
+      final responseRooms = await http.post(Uri.parse('$baseUrl/room/set-up'), headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
       },

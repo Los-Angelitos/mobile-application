@@ -214,7 +214,7 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
           label: 'Phone Number',
           hintText: '073 55 4877',
           keyboardType: TextInputType.phone,
-          validator: (value) => _validateRequired(value, 'Phone number'),
+          validator: (value) => _validatePhone(value),
         ),
         const SizedBox(height: 20),
         _buildHotelTypeDropdown(),
@@ -368,6 +368,21 @@ class _HotelRegistrationScreenState extends State<HotelRegistrationScreen> {
     if (value == null || value.trim().isEmpty) {
       return '$fieldName is required';
     }
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Phone number is required';
+    }
+    
+    // Remove any non-digit characters for validation
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+    
+    if (digitsOnly.length != 9) {
+      return 'Phone number must be exactly 9 digits';
+    }
+    
     return null;
   }
 

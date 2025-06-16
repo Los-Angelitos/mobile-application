@@ -105,7 +105,7 @@ class AuthService extends BaseService {
       String? email = await storage.read(key: 'email');
       String? password = await storage.read(key: 'password');
 
-      return login(email!, password!, 1);
+      return await login(email!, password!, 1);
     }
     catch(e) {
       rethrow;

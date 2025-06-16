@@ -146,7 +146,7 @@ class HotelService extends BaseService {
         'category': category
       }));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201) {
         return true;
       }
 

@@ -882,7 +882,7 @@ class _HotelPhotoUploadScreenState extends State<HotelSetupReviewScreen> {
         await _multimediaService.registerMultimedia(
           _uploadedImageUrls['logo']!,
           "LOGO",
-          0
+          1
         );
         print('Logo multimedia registered successfully');
       }
