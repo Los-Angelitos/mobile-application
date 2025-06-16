@@ -44,10 +44,6 @@ class MyApp extends StatelessWidget {
         '/organization': (context) => const OrganizationPage(),
         '/signup': (context) => const AuthScreen(),
         '/providers': (context) => const ProvidersView(),
-        '/bookings': (context) => BaseLayout(
-          role: 'guest',
-          childScreen: const ReservationsView(),
-        ),
         '/subscriptions': (context) => const SubscriptionPlans(),
         '/main': (context) => const HomeScreen(),
         '/hotel/overview': (context) => const HotelOverview(),
