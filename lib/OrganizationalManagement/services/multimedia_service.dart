@@ -70,68 +70,91 @@ class MultimediaService extends BaseService {
   }
 
   Future<List<String>> getHotelImages(int hotelId) async {
-  final headers = await _getAuthHeaders();
+    final headers = await _getAuthHeaders();
 
-  try {
-    // Hacer ambas peticiones en paralelo
-    final responses = await Future.wait([
-      http.get(
-        Uri.parse('$baseUrl/multimedia/main?hotelId=$hotelId'),
-        headers: headers,
-      ),
-      http.get(
-        Uri.parse('$baseUrl/multimedia/details?hotelId=$hotelId'),
-        headers: headers,
-      ),
-    ]);
+    try {
+      // Hacer ambas peticiones en paralelo
+      final responses = await Future.wait([
+        http.get(
+          Uri.parse('$baseUrl/multimedia/main?hotelId=$hotelId'),
+          headers: headers,
+        ),
+        http.get(
+          Uri.parse('$baseUrl/multimedia/details?hotelId=$hotelId'),
+          headers: headers,
+        ),
+      ]);
 
-    final mainResponse = responses[0];
-    final detailsResponse = responses[1];
+      final mainResponse = responses[0];
+      final detailsResponse = responses[1];
 
-    List<String> allImages = [];
+      List<String> allImages = [];
 
-    // Procesar respuesta de main (van primero)
-    if (mainResponse.statusCode == 200) {
-      final mainJsonData = json.decode(mainResponse.body);
-      
-      if (mainJsonData is List) {
-        allImages.addAll(mainJsonData
-            .map((item) => item['url']?.toString() ?? '')
-            .where((url) => url.isNotEmpty)
-            .toList());
-      } else if (mainJsonData is Map && mainJsonData['images'] != null) {
-        allImages.addAll(List<String>.from(mainJsonData['images']));
-      } else if (mainJsonData is Map && mainJsonData['data'] != null) {
-        allImages.addAll(List<String>.from(mainJsonData['data']));
+      // Procesar respuesta de main (van primero)
+      if (mainResponse.statusCode == 200) {
+        final mainJsonData = json.decode(mainResponse.body);
+        
+        if (mainJsonData is List) {
+          allImages.addAll(mainJsonData
+              .map((item) => item['url']?.toString() ?? '')
+              .where((url) => url.isNotEmpty)
+              .toList());
+        } else if (mainJsonData is Map && mainJsonData['images'] != null) {
+          allImages.addAll(List<String>.from(mainJsonData['images']));
+        } else if (mainJsonData is Map && mainJsonData['data'] != null) {
+          allImages.addAll(List<String>.from(mainJsonData['data']));
+        }
+      } else {
+        print('Error en endpoint main: ${mainResponse.statusCode}');
       }
-    } else {
-      print('Error en endpoint main: ${mainResponse.statusCode}');
-    }
 
-    // Procesar respuesta de details (van después)
-    if (detailsResponse.statusCode == 200) {
-      final detailsJsonData = json.decode(detailsResponse.body);
-      
-      if (detailsJsonData is List) {
-        allImages.addAll(detailsJsonData
-            .map((item) => item['url']?.toString() ?? '')
-            .where((url) => url.isNotEmpty)
-            .toList());
-      } else if (detailsJsonData is Map && detailsJsonData['images'] != null) {
-        allImages.addAll(List<String>.from(detailsJsonData['images']));
-      } else if (detailsJsonData is Map && detailsJsonData['data'] != null) {
-        allImages.addAll(List<String>.from(detailsJsonData['data']));
+      // Procesar respuesta de details (van después)
+      if (detailsResponse.statusCode == 200) {
+        final detailsJsonData = json.decode(detailsResponse.body);
+        
+        if (detailsJsonData is List) {
+          allImages.addAll(detailsJsonData
+              .map((item) => item['url']?.toString() ?? '')
+              .where((url) => url.isNotEmpty)
+              .toList());
+        } else if (detailsJsonData is Map && detailsJsonData['images'] != null) {
+          allImages.addAll(List<String>.from(detailsJsonData['images']));
+        } else if (detailsJsonData is Map && detailsJsonData['data'] != null) {
+          allImages.addAll(List<String>.from(detailsJsonData['data']));
+        }
+      } else {
+        print('Error en endpoint details: ${detailsResponse.statusCode}');
       }
-    } else {
-      print('Error en endpoint details: ${detailsResponse.statusCode}');
+
+      return allImages;
+
+
+    } catch (e) {
+      print('Error en MultimediaService: $e');
+      return []; // Retorna lista vacía en caso de error
     }
-
-    return allImages;
-
-
-  } catch (e) {
-    print('Error en MultimediaService: $e');
-    return []; // Retorna lista vacía en caso de error
   }
-}
+
+  Future<bool> registerMultimedia(String url, String type, int position) async {
+    try {
+      // Don't forget to refresh token after completing the hotel set up
+      final hotelId = await tokenHelper.getLocality();
+      final response = await http.post(Uri.parse('$baseUrl/multimedia'), headers: await _getAuthHeaders(),
+      body: jsonEncode({
+        'hotelId': hotelId,
+        'url': url,
+        'type': type,
+        'position': position
+      }));
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+
+      return false;
+    }
+    catch(e) {
+      rethrow;
+    }
+  }
 }

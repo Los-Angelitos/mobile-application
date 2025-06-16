@@ -282,4 +282,6 @@ class RoomService extends BaseService {
         throw Exception('Error HTTP ${response.statusCode}: ${response.body}');
     }
   }
+
+  
 }

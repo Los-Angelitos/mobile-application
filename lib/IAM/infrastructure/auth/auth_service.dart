@@ -26,6 +26,8 @@ class AuthService extends BaseService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        await storage.write(key: 'email', value: email);
+        await storage.write(key: 'password', value: password);
         print("Login successful, token: ${data['token']}");
 
         await storage.write(key: 'token', value: data['token']);
@@ -93,6 +95,19 @@ class AuthService extends BaseService {
 
       return false;
     } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> refreshSession() async {
+    try {
+      await logout();
+      String? email = await storage.read(key: 'email');
+      String? password = await storage.read(key: 'password');
+
+      return await login(email!, password!, 1);
+    }
+    catch(e) {
       rethrow;
     }
   }

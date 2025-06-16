@@ -8,15 +8,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:async';
 import 'package:sweetmanager/Monitoring/services/room_service.dart';
 
-class HotelDetailView extends StatefulWidget {
+class HotelOverview extends StatefulWidget {
 
-  const HotelDetailView({Key? key}) : super(key: key);
+  const HotelOverview({Key? key}) : super(key: key);
 
   @override
-  State<HotelDetailView> createState() => _HotelDetailViewState();
+  State<HotelOverview> createState() => _HotelOverviewState();
 }
 
-class _HotelDetailViewState extends State<HotelDetailView> {
+class _HotelOverviewState extends State<HotelOverview> {
   final RoomService _roomService = RoomService();
   final HotelService _hotelService = HotelService();
   final MultimediaService _multimediaService = MultimediaService();
@@ -279,11 +279,6 @@ Future<void> _updateHotelField(String field, String value) async {
 
   Widget _buildContent() {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : error != null

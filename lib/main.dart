@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/Commerce/views/subscription_plans.dart';
+import 'package:sweetmanager/IAM/views/advice_set_up.dart';
 import 'package:sweetmanager/IAM/views/authscreen.dart';
 import 'package:sweetmanager/IAM/views/home.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/hotel_register.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/hotel_setup.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/hotel_setup_review.dart';
 import 'package:sweetmanager/OrganizationalManagement/views/main_page.dart';
 import 'package:sweetmanager/IAM/views/user_profile_info.dart';
 import 'package:sweetmanager/IAM/views/user_profile_account.dart';
@@ -40,36 +44,17 @@ class MyApp extends StatelessWidget {
         '/organization': (context) => const OrganizationPage(),
         '/signup': (context) => const AuthScreen(),
         '/providers': (context) => const ProvidersView(),
-        '/hotel/overview': (context) => const HotelDetailView(),
         '/bookings': (context) => BaseLayout(
           role: 'guest',
           childScreen: const ReservationsView(),
         ),
         '/subscriptions': (context) => const SubscriptionPlans(),
         '/main': (context) => const HomeScreen(),
-        /*'/dashboard': (context) => const DashboardScreen(),
-        // '/dashboard': (context) => const DashboardScreen(),
-        '/login': (context) => const LogInScreen(),
-        '/dashboard': (context) => const DashboardScreen(),
-        // '/subscription': (context) => const SubscriptionPlansView(),
-        '/rooms': (context) => const TableRoom(),
-        '/providers': (context) => const ProvidersManagement(),
-        // ignore: prefer_const_constructors
-        '/supplies': (context) => InventoryManagement() ,
-        '/messages': (context) => MessagesScreen(),
-        // ignore: prefer_const_constructors
-        '/reports': (context) => ReportList(),
-        '/profiles': (context) => ProfilePage(),
-        '/writemessage': (context) => WriteMessage(),
-        '/alerts': (context) => const AlertsScreen(),
-        '/writealert': (context) => WriteAlertScreen(),
-        '/notifications': (context) => NotificationsScreen(),
-        '/worker-areas-selection': (context) => const WorkerAreasSelection(),
-        '/bookings': (context) => const TableBooking(),
-        '/admins-management': (context) => const AdminManagement(),
-        '/workers-management': (context) => const WorkerManagement(),
-        '/customers-management': (context) => const CustomersManagement(),
-        '/current-subscription': (context) => const CurrentSubscription(), */
+        '/hotel/overview': (context) => const HotelOverview(),
+        '/advice': (context) => const AdviceSetupView(),
+        '/hotel/register': (context) => const HotelRegistrationScreen(),
+        '/hotel/set-up': (context) => const HotelSetupScreen(),
+        '/hotel/set-up/review': (context) => const HotelSetupReviewScreen()
       },
     );
   }

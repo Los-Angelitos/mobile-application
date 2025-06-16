@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/auth_service.dart';
+import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import 'account_type_selection_screen.dart';
 
@@ -35,6 +36,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLoading = false;
   final ScrollController _loginScrollController = ScrollController();
   final ScrollController _signupScrollController = ScrollController();
+  final TokenHelper tokenHelper = TokenHelper();
 
   // Constants
   static const Color _primaryColor = Color(0xFF1976D2);
@@ -375,8 +377,14 @@ class _AuthScreenState extends State<AuthScreen> {
       final bool success = await authService.login(email, password, roleId);
       
       if (success && mounted) {
+        final hotelId = await tokenHelper.getLocality();
+        
+        if (hotelId == "0"){
+          Navigator.pushNamed(context, '/advice');
+          return;
+        }
         if (roleId == 1) {
-          Navigator.pushNamed(context, '/organization');
+          Navigator.pushNamed(context, '/hotel/overview');
         } else {
           Navigator.pushNamed(context, '/main');
         }
