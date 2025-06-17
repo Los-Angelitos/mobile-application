@@ -13,9 +13,8 @@ import 'package:sweetmanager/IAM/views/user_profile_preferences.dart';
 import 'package:sweetmanager/Monitoring/views/guest_reservation.dart';
 import 'package:sweetmanager/Monitoring/views/rooms_view.dart';
 import 'package:sweetmanager/OrganizationalManagement/views/hotel_overview.dart';
-import 'package:sweetmanager/OrganizationalManagement/views/my_organization.dart';
-import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import 'package:sweetmanager/Monitoring/views/reservations_view.dart';
+import 'package:sweetmanager/OrganizationalManagement/views/my_organization.dart';
 import 'Inventory/views/providers_view.dart';
 
 void main() async {
