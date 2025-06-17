@@ -99,13 +99,18 @@ class MultimediaService extends BaseService {
               .map((item) => item['url']?.toString() ?? '')
               .where((url) => url.isNotEmpty)
               .toList());
+        } else if (mainJsonData is Map && mainJsonData['url'] != null) {
+          print('[MAIN] Es map con "url" directo');
+          allImages.add(mainJsonData['url'].toString());
         } else if (mainJsonData is Map && mainJsonData['images'] != null) {
+          print('[MAIN] Es map con "images"');
           allImages.addAll(List<String>.from(mainJsonData['images']));
         } else if (mainJsonData is Map && mainJsonData['data'] != null) {
+          print('[MAIN] Es map con "data"');
           allImages.addAll(List<String>.from(mainJsonData['data']));
+        } else {
+          print('[MAIN] Formato inesperado: $mainJsonData');
         }
-      } else {
-        print('Error en endpoint main: ${mainResponse.statusCode}');
       }
 
       // Procesar respuesta de details (van después)
