@@ -1,133 +1,76 @@
-// views/guest_reservation_view.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dart:convert';
-import '../models/hotel.dart';
-import '../services/hotel_service.dart';
-import 'package:sweetmanager/shared/widgets/base_layout.dart';
+import 'package:sweetmanager/Monitoring/models/booking.dart';
+import 'package:sweetmanager/Monitoring/services/booking_service.dart';
+import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart'; // Adjust path as needed
 
 class GuestReservationView extends StatefulWidget {
-  const GuestReservationView({Key? key}) : super(key: key);
+  const GuestReservationView({super.key});
 
   @override
-  State<GuestReservationView> createState() => _GuestReservationViewState();
+  State<GuestReservationView> createState() => _GuestReservationScreenState();
 }
 
-class _GuestReservationViewState extends State<GuestReservationView> {
-  final HotelService _hotelService = HotelService();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  Hotel? hotel;
-  bool isLoading = true;
-  String? error;
-  String userRole = '';
+class _GuestReservationScreenState extends State<GuestReservationView> {
+  final BookingService _bookingService = BookingService();
+  final TokenHelper _tokenHelper = TokenHelper();
+  List<Booking> _bookings = [];
+  bool _isLoading = true;
+  bool _hasError = false;
+  String? _customerId;
+
+  // Constants
+  static const Color _primaryBlue = Color(0xFF1976D2);
+  static const Color _textColor = Color(0xFF2C3E50);
+  static const Color _subtitleColor = Color(0xFF95A5A6);
+  static const Color _cardBackground = Colors.white;
+  static const Color _activeColor = Color(0xFF4CAF50);
+  static const double _borderRadius = 12.0;
 
   @override
   void initState() {
     super.initState();
-    _loadUserRole();
-    _loadHotelData();
+    _initializeAndLoadBookings();
   }
 
-  Future<void> _loadUserRole() async {
+  Future<void> _initializeAndLoadBookings() async {
     try {
-      final token = await _storage.read(key: 'token');
-      if (token == null) return;
-
-      final parts = token.split('.');
-      if (parts.length != 3) return;
-
-      final payload = parts[1];
-      final normalized = base64Url.normalize(payload);
-      final decoded = utf8.decode(base64Url.decode(normalized));
-      final payloadMap = json.decode(decoded);
-
-      final role = payloadMap['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']?.toString();
-
-      setState(() {
-        userRole = role ?? 'ROLE_GUEST';
-      });
+      _customerId = await _tokenHelper.getIdentity();
+      if (_customerId != null) {
+        await _loadBookings();
+      } else {
+        setState(() {
+          _hasError = true;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      print('Error loading user role: $e');
       setState(() {
-        userRole = 'ROLE_GUEST';
+        _hasError = true;
+        _isLoading = false;
       });
     }
   }
 
-  Future<String?> _getHotelIdFromToken() async {
-    try {
-      final token = await _storage.read(key: 'token');
-      if (token == null) {
-        print('No token found in storage');
-        return null;
-      }
-
-      // Decodificar el JWT token para obtener el hotelId
-      final parts = token.split('.');
-      if (parts.length != 3) {
-        print('Invalid token format');
-        return null;
-      }
-
-      final payload = parts[1];
-      final normalized = base64Url.normalize(payload);
-      final decoded = utf8.decode(base64Url.decode(normalized));
-      final payloadMap = json.decode(decoded);
-
-      print('Token payload: $payloadMap');
-
-      // El hotelId está en la clave específica del schema XML
-      final hotelId = payloadMap['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/locality']?.toString();
-
-      if (hotelId != null) {
-        print('Hotel ID extracted from token: $hotelId');
-        return hotelId;
-      } else {
-        print('Hotel ID not found in token payload');
-        return null;
-      }
-    } catch (e) {
-      print('Error extracting hotel ID from token: $e');
-      return null;
-    }
-  }
-
-  Future<void> _loadHotelData() async {
+  Future<void> _loadBookings() async {
+    if (_customerId == null) return;
+    
     try {
       setState(() {
-        isLoading = true;
-        error = null;
+        _isLoading = true;
+        _hasError = false;
       });
-
-      final hotelId = await _getHotelIdFromToken();
-      if (hotelId == null) {
-        setState(() {
-          error = 'No se pudo obtener el ID del hotel del token';
-          isLoading = false;
-        });
-        return;
-      }
-
-      print('Loading hotel data for ID: $hotelId');
-      final hotelData = await _hotelService.getHotelById(hotelId);
-
-      if (hotelData != null) {
-        print('Hotel data loaded successfully: ${hotelData.name}');
-        setState(() {
-          hotel = hotelData;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          error = 'No se pudo cargar la información del hotel';
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading hotel data: $e');
+      final bookings = await _bookingService.getBookingsByCustomer(_customerId!);
+      
       setState(() {
-        error = e.toString();
-        isLoading = false;
+        _bookings = bookings;
+        _isLoading = false;
+      });
+    
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _isLoading = false;
       });
     }
   }
@@ -135,174 +78,325 @@ class _GuestReservationViewState extends State<GuestReservationView> {
   @override
   Widget build(BuildContext context) {
     return BaseLayout(
-      role: userRole,
-      childScreen: _buildContent(),
+      childScreen: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: _buildContent(),
+            ),
+          ],
+        ),
+      ),
+      role: 'ROLE_GUEST',
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(24.0),
+      child: const Column(
+        children: [
+          Text(
+            'Reservations',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: _textColor,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Check all your reservations,\ntheir status, and be ready for\nadventure!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: _subtitleColor,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildContent() {
-    return Container(
-      color: Colors.white,
-      child: Column(
-        children: [
-          // Header personalizado (reemplaza el AppBar anterior)
-          _buildCustomHeader(),
-          // Contenido principal
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : error != null
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: $error'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadHotelData,
-                    child: const Text('Reintentar'),
-                  ),
-                ],
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: _primaryBlue,
+        ),
+      );
+    }
+
+    if (_hasError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to load reservations',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: _textColor,
               ),
-            )
-                : hotel == null
-                ? const Center(child: Text('Hotel no encontrado'))
-                : _buildHotelContent(),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Please try again later',
+              style: TextStyle(
+                fontSize: 14,
+                color: _subtitleColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _initializeAndLoadBookings,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryBlue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_bookings.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.hotel_outlined,
+              size: 64,
+              color: _subtitleColor,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'No reservations found',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: _textColor,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Start exploring to make your first booking!',
+              style: TextStyle(
+                fontSize: 14,
+                color: _subtitleColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadBookings,
+      color: _primaryBlue,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: GridView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.85, // Adjust this to control card height
           ),
-        ],
+          itemCount: _bookings.length,
+          itemBuilder: (context, index) {
+            return _buildBookingCard(_bookings[index]);
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildCustomHeader() {
+  Widget _buildBookingCard(Booking booking) {
+    final statusColor = _getStatusColor(booking.statusText);
+    
     return Container(
-      padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBackground,
+        borderRadius: BorderRadius.circular(_borderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            hotel?.name ?? 'Hotel Details',
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHotelContent() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Hotel Images Gallery
-          _buildImageGallery(),
-
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 2. Hotel Info and Price/Booking (side by side)
-                IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Left container - Hotel Info
-                      Expanded(
-                        child: _buildHotelHeader(),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Hotel Logo - Use hotelLogo if available, otherwise default icon
+            Container(
+              width: 50,
+              height: 50,
+              decoration: const BoxDecoration(
+                color: _primaryBlue,
+                shape: BoxShape.circle,
+              ),
+              child: booking.hotelLogo != null && booking.hotelLogo!.isNotEmpty
+                  ? ClipOval(
+                      child: Image.network(
+                        booking.hotelLogo!,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.hotel,
+                            color: Colors.white,
+                            size: 24,
+                          );
+                        },
                       ),
-                      const SizedBox(width: 12),
-                      // Right container - Price and Booking
-                      Expanded(
-                        child: _buildPriceAndBookingSection(),
+                    )
+                  : const Icon(
+                      Icons.hotel,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Hotel Name - Use hotelName if available, otherwise description
+            Text(
+              booking.hotelName ?? booking.description ?? 'Hotel',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _textColor,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            
+            const SizedBox(height: 8),
+            
+            // Phone Number - Use hotelPhone if available
+            Column(
+              children: [
+                if (booking.hotelPhone != null && booking.hotelPhone!.isNotEmpty)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.phone,
+                        size: 14,
+                        color: _subtitleColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        booking.hotelPhone!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _subtitleColor,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.confirmation_number,
+                        size: 14,
+                        color: _subtitleColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Room ${booking.roomId}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _subtitleColor,
+                          fontWeight: FontWeight.w400,
+                        ),
                       ),
                     ],
                   ),
+                const SizedBox(height: 4),
+                Text(
+                  '\$${booking.amount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: _subtitleColor,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
-
-                const SizedBox(height: 12),
-
-                // 3. Location
-                _buildLocationInfo(),
-
-                const SizedBox(height: 20),
-
-                // 4. About This Place
-                _buildAboutSection(),
-
-                const SizedBox(height: 20),
-
-                // 5. Amenities/Services
-                _buildAmenitiesSection(),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImageGallery() {
-    return Container(
-      height: 200,
-      child: PageView(
-        children: [
-          _buildImageCard('Hotel View 1'),
-          _buildImageCard('Hotel View 2'),
-          _buildImageCard('Hotel View 3'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImageCard(String title) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          colors: [Colors.blue[400]!, Colors.blue[600]!],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.hotel,
-              size: 64,
-              color: Colors.white,
+            
+            const SizedBox(height: 12),
+            
+            // Status Badge - Use statusText from your model
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: statusColor.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                booking.statusText,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: statusColor,
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+            
+            const SizedBox(height: 12),
+            
+            // Cancel Button - Only show if booking can be cancelled
+            SizedBox(
+              width: double.infinity,
+              height: 36,
+              child: OutlinedButton(
+                onPressed: booking.canCancel ? () => _showCancelDialog(booking) : null,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                    color: booking.canCancel 
+                        ? _subtitleColor.withOpacity(0.5)
+                        : _subtitleColor.withOpacity(0.2)
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: booking.canCancel ? _subtitleColor : _subtitleColor.withOpacity(0.5),
+                  ),
+                ),
               ),
             ),
           ],
@@ -311,255 +405,96 @@ class _GuestReservationViewState extends State<GuestReservationView> {
     );
   }
 
-  Widget _buildHotelHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.teal,
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: const Icon(
-              Icons.hotel,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  hotel!.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                Text(
-                  '${hotel!.address}, ${hotel!.city}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                if (hotel!.phone.isNotEmpty)
-                  Row(
-                    children: [
-                      const Icon(Icons.phone, size: 16, color: Colors.red),
-                      const SizedBox(width: 4),
-                      Text(
-                        hotel!.phone,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'ACTIVE':
+        return _activeColor;
+      case 'CONFIRMED':
+        return Colors.blue;
+      case 'PENDING':
+        return Colors.orange;
+      case 'CANCELLED':
+        return Colors.red;
+      default:
+        return _subtitleColor;
+    }
   }
 
-  Widget _buildPriceAndBookingSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'S/ 320',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              Text(
-                'per night',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                _showBookingDialog();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              child: const Text(
-                'Quote your next booking',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLocationInfo() {
-    return Row(
-      children: [
-        const Icon(Icons.location_on, color: Colors.red, size: 16),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            '${hotel!.city}, ${hotel!.address} - Perú',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAboutSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'About This Place',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          hotel!.description.isNotEmpty
-              ? hotel!.description
-              : 'This vibrant all-inclusive hotel is nestled among palm trees on Punta Sal beach, 6 km from the town center and 89 km from Tumbes Airport. Simple rooms feature a terrace or balcony, flat-screen TV, and internet access (chargeable); some have a sitting area. Free amenities include water sports, evening entertainment, and beach equipment rentals, plus meals and drinks served at 3 restaurants and 5 bars.',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[700],
-            height: 1.5,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAmenitiesSection() {
-    final amenities = [
-      {'icon': Icons.wifi, 'label': 'Paid Wi-Fi'},
-      {'icon': Icons.restaurant, 'label': 'Breakfast included'},
-      {'icon': Icons.local_parking, 'label': 'Free parking'},
-      {'icon': Icons.pool, 'label': 'Outdoor pool'},
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Amenities',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...amenities.map((amenity) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Icon(
-                amenity['icon'] as IconData,
-                size: 20,
-                color: Colors.teal,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                amenity['label'] as String,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
-          ),
-        )).toList(),
-      ],
-    );
-  }
-
-  void _showBookingDialog() {
+  void _showCancelDialog(Booking booking) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Reservar ${hotel!.name}'),
-          content: const Text('La funcionalidad de reserva se implementará aquí.'),
+          title: const Text('Cancel Reservation'),
+          content: Text(
+            'Are you sure you want to cancel your reservation for ${booking.hotelName ?? booking.description ?? 'this hotel'}?'
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('No'),
             ),
-            ElevatedButton(
+            TextButton(
               onPressed: () {
-                Navigator.pop(context);
-                // Manejar la reserva real
+                Navigator.of(context).pop();
+                _cancelBooking(booking);
               },
-              child: const Text('Continuar'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Yes, Cancel'),
             ),
           ],
         );
       },
     );
+  }
+
+  Future<void> _cancelBooking(Booking booking) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: _primaryBlue),
+        ),
+      );
+
+      // Replace with your actual cancel booking service call if available
+      // await _bookingService.cancelBooking(booking.id);
+      
+      // Simulate API call for now
+      await Future.delayed(const Duration(seconds: 1));
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Refresh the bookings list to get updated data
+      await _loadBookings();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reservation cancelled successfully'),
+            backgroundColor: _activeColor,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+      
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel reservation: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

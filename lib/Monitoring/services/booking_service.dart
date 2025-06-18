@@ -1,7 +1,6 @@
 // services/booking_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as https;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/booking.dart';
 import '../models/hotel.dart';
 import '../services/hotel_service.dart';
@@ -156,7 +155,7 @@ class BookingService extends BaseService {
         print('Processing ${bookingsJson.length} bookings');
 
         // Obtener el hotelId del token para enriquecer las reservas
-        final hotelId = await _getHotelIdFromToken();
+        final hotelId = await tokenHelper.getLocality();
         Hotel? hotelInfo;
 
         if (hotelId != null) {
@@ -189,10 +188,8 @@ class BookingService extends BaseService {
 
             return booking;
           } catch (e) {
-            print('Error parsing booking: $e');
-            print('Booking data: $json');
             // Crear un booking con valores por defecto para datos faltantes
-            return _createBookingWithDefaults(json, hotelInfo);
+            rethrow;
           }
         }).toList();
 
@@ -202,7 +199,6 @@ class BookingService extends BaseService {
         throw Exception('Failed to load bookings: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Error in getBookingsByCustomer: $e');
       throw Exception('Error fetching bookings: $e');
     }
   }
@@ -264,7 +260,7 @@ class BookingService extends BaseService {
       hotelPhone: hotelInfo?.phone ?? json['hotelPhone']?.toString() ?? json['hotel_phone']?.toString(),
     );
   }
-
+  
   // Métodos auxiliares para parsing seguro
   DateTime? _parseDate(dynamic value) {
     if (value == null) return null;

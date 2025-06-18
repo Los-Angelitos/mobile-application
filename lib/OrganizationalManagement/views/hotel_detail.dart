@@ -8,15 +8,16 @@ class HotelDetailScreen extends StatelessWidget {
   final Multimedia? multimediaMain;
   final Multimedia? multimediaLogo;
   final List<Multimedia>? multimediaDetails;
+  final int minimumPrice;
 
   const HotelDetailScreen({
-    Key? key,
+    super.key,
     required this.hotel,
     required this.multimediaMain,
     required this.multimediaLogo,
     required this.multimediaDetails,
-
-   }) : super(key: key);
+    required this.minimumPrice
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +28,7 @@ class HotelDetailScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
-            backgroundColor: Color(0xFF1976D2),
+            backgroundColor: const Color(0xFF1976D2),
             flexibleSpace: FlexibleSpaceBar(
               background: Image.network(
                 multimediaMain?.url ??
@@ -36,7 +37,7 @@ class HotelDetailScreen extends StatelessWidget {
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     color: Colors.grey[300],
-                    child: Icon(Icons.image_not_supported, size: 50),
+                    child: const Icon(Icons.image_not_supported, size: 50),
                   );
                 },
                 width: double.infinity,
@@ -46,7 +47,7 @@ class HotelDetailScreen extends StatelessWidget {
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -55,7 +56,7 @@ class HotelDetailScreen extends StatelessWidget {
                       Expanded(
                         child: Text(
                           hotel.name,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
@@ -80,7 +81,7 @@ class HotelDetailScreen extends StatelessWidget {
                     ],
                   ),
 
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     hotel.address,
                     style: TextStyle(
@@ -88,8 +89,8 @@ class HotelDetailScreen extends StatelessWidget {
                       color: Colors.grey[600],
                     ),
                   ),
-                  SizedBox(height: 20),
-                  Text(
+                  const SizedBox(height: 20),
+                  const Text(
                     'Description',
                     style: TextStyle(
                       fontSize: 18,
@@ -97,7 +98,7 @@ class HotelDetailScreen extends StatelessWidget {
                       color: Colors.black87,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     hotel.description,
                     style: TextStyle(
@@ -107,15 +108,15 @@ class HotelDetailScreen extends StatelessWidget {
                     ),
                   ),
                   
-                  SizedBox(height: 30),
+                  const SizedBox(height: 30),
                   Row(
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'S/ 200',
-                            style: TextStyle(
+                            '\$${minimumPrice.toString()}',
+                            style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF1976D2),
@@ -130,7 +131,7 @@ class HotelDetailScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(width: 20),
+                      const SizedBox(width: 20),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
@@ -140,13 +141,13 @@ class HotelDetailScreen extends StatelessWidget {
                             );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF1976D2),
-                            padding: EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: const Color(0xFF1976D2),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text(
+                          child: const Text(
                             'Book Now',
                             style: TextStyle(
                               fontSize: 16,

@@ -8,19 +8,17 @@ import 'package:sweetmanager/IAM/domain/model/aggregates/guest.dart';
 import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
 import 'package:sweetmanager/IAM/domain/model/queries/update_user_profile_request.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
+import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 import 'package:sweetmanager/shared/infrastructure/services/cloudinary_service.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
+// ignore: must_be_immutable
 class ProfilePage extends StatefulWidget {
   Owner? ownerProfile;
   Guest? guestProfile;
   String? userType;
 
-  ProfilePage(
-      {super.key, this.ownerProfile, this.guestProfile, this.userType}) {
-    print('ProfilePage initialized with userType: $userType');
-    print('Owner Profile: ${ownerProfile?.toJson()}');
-    print('Guest Profile: ${guestProfile?.toJson()}');
-  }
+  ProfilePage({super.key, this.ownerProfile, this.guestProfile, this.userType});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -29,6 +27,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final UserService userService = UserService();
   final ImagePicker _picker = ImagePicker();
+  final TokenHelper _tokenHelper = TokenHelper();
   late final CloudinaryService cloudinaryService;
 
   bool _isUploadingPhoto = false;
@@ -58,7 +57,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final _languages = ['Español', 'Inglés', 'Portugués'];
 
   Map<String, dynamic> _userData = {};
-  Map<String, bool> _editMode = {
+  final Map<String, bool> _editMode = {
     'name': false,
     'surname': false,
     'email': false,
@@ -81,6 +80,12 @@ class _ProfilePageState extends State<ProfilePage> {
     cloudinaryService = CloudinaryService();
 
     _loadUserData();
+  }
+
+  Future<String?> _getRole() async
+  {
+    // Retrieve token from local storage
+    return await _tokenHelper.getRole();
   }
 
   Future<void> _loadUserData() async {
@@ -445,21 +450,31 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: kIsWeb
-            ? const Text('Perfil (Modo Web)',
-                style: TextStyle(color: Colors.grey))
-            : null,
-      ),
-      body: SingleChildScrollView(
+    return FutureBuilder(
+      future: _getRole(),
+      builder: (context, snapshot) {
+        if(snapshot.connectionState == ConnectionState.waiting)
+        {
+          return const Center(child: CircularProgressIndicator(),);
+        }
+
+        if(snapshot.hasData)
+        {
+          String? role = snapshot.data;
+
+          return BaseLayout(
+            role: role,
+            childScreen: getContentView()
+          );
+        }
+
+        return const Center(child: Text('Unable to get information', textAlign: TextAlign.center,));
+      }
+    );
+  }
+
+  Widget getContentView() {
+    return SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
@@ -484,7 +499,6 @@ class _ProfilePageState extends State<ProfilePage> {
             _buildAdditionalForm(),
           ],
         ),
-      ),
     );
   }
 

@@ -9,71 +9,94 @@ import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 class AccountPage extends StatefulWidget {
-  AccountPage({super.key});
-  final UserService userService = UserService();
-  Guest? guestProfile;
-  Owner? ownerProfile;
-  int? roleId;
+  const AccountPage({super.key});
 
   @override
   State<AccountPage> createState() => _AccountPageState();
 }
 
 class _AccountPageState extends State<AccountPage> {
+  final UserService userService = UserService();
+  Guest? guestProfile;
+  Owner? ownerProfile;
+  int? roleId;
+  bool _isLoading = true;
+  bool _hasError = false;
+  String? _errorMessage;
+
   @override
   void initState() {
     super.initState();
-    fetchUserProfile();
-    getRoleId();
+    _initializeAccountData();
   }
 
   String get userFullName {
-    return widget.ownerProfile?.name ??
-        widget.guestProfile?.name ??
-        'Unknown User';
+    return ownerProfile?.name ?? guestProfile?.name ?? 'Unknown User';
   }
 
   String get userRole {
-    return widget.ownerProfile != null ? 'Owner' : 'Guest';
+    return ownerProfile != null ? 'Owner' : 'Guest';
   }
 
   String get userPhotoURL {
-    return widget.ownerProfile?.photoURL ??
-        widget.guestProfile?.photoURL ??
-        'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg'; // Default image
+    return ownerProfile?.photoURL ??
+        guestProfile?.photoURL ??
+        'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg';
   }
 
-  Future<void> fetchUserProfile() async {
+  Future<void> _initializeAccountData() async {
     try {
-      widget.guestProfile = await widget.userService.getGuestProfile();
-      widget.ownerProfile = await widget.userService.getOwnerProfile();
-      setState(() {});
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _errorMessage = null;
+      });
 
-      print(
-          'User profile fetched successfully: ${widget.guestProfile?.toJson()}');
-      print(
-          'Owner profile fetched successfully: ${widget.ownerProfile?.toJson()}');
+
+      // Get role ID first
+      await _getRoleId();
+      
+      // Then fetch user profile
+      await _fetchUserProfile();
+
+      
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
-      print('Error fetching user profile: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$e')),
-      );
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = e.toString();
+      });
     }
   }
 
-  Future<void> getRoleId() async {
+  Future<void> _fetchUserProfile() async {
     try {
-      final roleId = await TokenHelper().getRole();
-      if (roleId == null) {
+      
+      guestProfile = await userService.getGuestProfile();
+      ownerProfile = await userService.getOwnerProfile();
+      
+      setState(() {});
+    } catch (e) {
+      throw Exception('Failed to fetch user profile: $e');
+    }
+  }
+
+  Future<void> _getRoleId() async {
+    try {
+      
+      final roleString = await TokenHelper().getRole();
+      if (roleString == null) {
         throw Exception('Role ID not found in token');
       }
 
-      print('Role ID: $roleId');
-      widget.roleId = roleId == "ROLE_OWNER" ? 1 : 3;
+      roleId = roleString == "ROLE_OWNER" ? 1 : 3;
+      
       setState(() {});
-      print('Role ID set to: ${widget.roleId}');
     } catch (e) {
-      print('Error fetching role ID: $e');
+      throw Exception('Failed to get role ID: $e');
     }
   }
 
@@ -85,162 +108,223 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Future<void> logOut() async {
-    final storage = const FlutterSecureStorage();
-    await storage.delete(key: 'token');
-    await storage.delete(key: 'roleId');
-    await storage.delete(key: 'id');
-    await storage.delete(key: 'userId');
+    try {
+      const storage = FlutterSecureStorage();
+      await storage.delete(key: 'token');
+      await storage.delete(key: 'roleId');
+      await storage.delete(key: 'id');
+      await storage.delete(key: 'userId');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Logged out successfully')),
-    );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logged out successfully')),
+        );
 
-    Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logout failed: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: getRoleId(), 
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
-        {
-          return const Center(child: CircularProgressIndicator(),);
-        }
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading account...'),
+            ],
+          ),
+        ),
+      );
+    }
 
-        if (snapshot.hasData) 
-        {
-            int? role = widget.roleId!;
+    if (_hasError) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Failed to load account',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage ?? 'Unknown error occurred',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _initializeAccountData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
-            if (role == 1) {
-              return BaseLayout(role: "ROLE_OWNER", childScreen: getContentView());
-            }
-            else{
-              return BaseLayout(role: "ROLE_GUEST", childScreen: getContentView());
-            }
-        }
+    if (roleId == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text(
+            'Unable to determine user role',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
 
-        return const Center(child: Text('Unable to get information', textAlign: TextAlign.center,));
-      }
+    // Build the main content with proper role
+    final role = roleId == 1 ? "ROLE_OWNER" : "ROLE_GUEST";
+    
+    return BaseLayout(
+      role: role,
+      childScreen: _buildContentView(),
     );
   }
 
-  Widget getContentView() {
+  Widget _buildContentView() {
     return Center(
-        child: Column(
-          children: [
-            const SizedBox(height: 60),
-            const Text(
-              'Account',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      child: Column(
+        children: [
+          const SizedBox(height: 60),
+          const Text(
+            'Account',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          Card(
+            elevation: 4,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
             ),
-            const SizedBox(height: 20),
-            Card(
-              elevation: 4,
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  Container(
-                    height: 30,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2B61B6),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(15),
-                        topRight: Radius.circular(15),
-                      ),
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                Container(
+                  height: 30,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2B61B6),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(15),
+                      topRight: Radius.circular(15),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  CircleAvatar(
-                      radius: 30,
-                      backgroundImage: NetworkImage(userPhotoURL.isNotEmpty
-                          ? userPhotoURL
-                          : 'https://static.vecteezy.com/system/resources/previews/009/292/244/non_2x/default-avatar-icon-of-social-media-user-vector.jpg')),
-                  const SizedBox(height: 8),
-                  Column(
-                    children: [
-                      Text(
-                        userFullName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                ),
+                const SizedBox(height: 10),
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: NetworkImage(userPhotoURL),
+                  onBackgroundImageError: (exception, stackTrace) {
+                    print('Error loading profile image: $exception');
+                  },
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  children: [
+                    Text(
+                      userFullName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      userRole,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Divider(height: 1),
+                _buildListTile(
+                  context,
+                  icon: Icons.person,
+                  text: 'Personal Information',
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProfilePage(
+                          ownerProfile: ownerProfile,
+                          guestProfile: guestProfile,
+                          userType: userRole,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        userRole,
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  const Divider(height: 1),
-                  buildListTile(
+                    );
+                    // Refresh profile data after returning
+                    _fetchUserProfile();
+                  },
+                  isSelected: true,
+                ),
+                if (roleId == 3)
+                  _buildListTile(
                     context,
-                    icon: Icons.person,
-                    text: 'Personal Information',
-                    onTap: () async {
-                      await Navigator.push(
+                    icon: Icons.tune,
+                    text: 'My preferences as a Guest',
+                    onTap: () {
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => ProfilePage(
-                            ownerProfile: widget.ownerProfile,
-                            guestProfile: widget.guestProfile,
-                            userType: userRole,
-                          ),
+                          builder: (_) => UserPreferencesPage(),
                         ),
                       );
-                      fetchUserProfile(); // Refresh profile data
                     },
-                    isSelected: true,
                   ),
-                  if (widget.roleId == 3)
-                    buildListTile(
-                      context,
-                      icon: Icons.tune,
-                      text: 'My preferences as a Guest',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => UserPreferencesPage()),
-                        );
-                      },
-                    ),
-                  buildListTile(
-                    context,
-                    icon: Icons.schedule,
-                    text: 'My Reservations',
-                    onTap: () => navigateTo(context, 'My Reservations'),
+                _buildListTile(
+                  context,
+                  icon: Icons.schedule,
+                  text: 'My Reservations',
+                  onTap: () => Navigator.pushNamed(context, '/guest-reservation'),
+                ),
+                _buildListTile(
+                  context,
+                  icon: Icons.logout,
+                  text: 'Logout',
+                  onTap: logOut,
+                  textColor: Colors.red,
+                  iconColor: Colors.red,
+                ),
+                const Divider(height: 1),
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    'SweetManager',
+                    style: TextStyle(color: Colors.grey),
                   ),
-                  buildListTile(
-                    context,
-                    icon: Icons.logout,
-                    text: 'Logout',
-                    onTap: () => logOut(),
-                    textColor: Colors.red,
-                    iconColor: Colors.red,
-                  ),
-                  const Divider(height: 1),
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text('SweetManager',
-                        style: TextStyle(color: Colors.grey)),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 
-
-  Widget buildListTile(
+  Widget _buildListTile(
     BuildContext context, {
     required IconData icon,
     required String text,

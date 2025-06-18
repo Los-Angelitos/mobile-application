@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:sweetmanager/Monitoring/models/room_type.dart';
 import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import 'package:sweetmanager/Monitoring/models/room.dart';
 import 'package:sweetmanager/Monitoring/models/room_type.dart';
@@ -279,6 +280,49 @@ class RoomService extends BaseService {
     }
   }
 
+  Future<List<RoomType>> getTypeRoomsByHotel(int hotelId) async {
+    try {
+      final token = await storage.read(key: 'token');
+      final response = await http.get(Uri.parse('$baseUrl/type-room/get-all-type-rooms?hotelId=$hotelId'), headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      });
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body);
+      
+        return jsonList.map((json) {
+          return RoomType(
+            id: json['id'] ?? 0,
+            name: json['description'] ?? '', // map 'description' to 'name'
+          );
+        }).toList();
+      }
+
+      return [];
+    }
+    catch(e) {
+      rethrow;
+    }
+  }
+
+  Future<int> getMinimumPriceRoomByHotelId(int hotelId) async {
+    try {
+      final token = await storage.read(key: 'token');
+      final response = await http.get(Uri.parse('$baseUrl/type-room/get-minimum-price-type-room-by-hotel-id?hotelId=$hotelId'),headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token'
+      });
+      if (response.statusCode == 200) {
+        final responseJson = jsonDecode(response.body);
+        return responseJson['minimumPrice'] as int;
+      }
+      return 0;
+    }
+    catch(e) {
+      rethrow;
+    }
+  }
+  
   Future<List<RoomType>> getRoomTypesByHotel() async {
     try {
       final token = await _getValidToken();

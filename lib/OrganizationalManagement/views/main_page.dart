@@ -1,35 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:sweetmanager/Monitoring/services/room_service.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/hotel.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/multimedia.dart';
 import 'package:sweetmanager/OrganizationalManagement/services/hotel_service.dart';
 import 'package:sweetmanager/OrganizationalManagement/views/hotel_detail.dart';
-import 'package:sweetmanager/OrganizationalManagement/widgets/custom_app_bar.dart';
 import 'package:sweetmanager/OrganizationalManagement/widgets/search_bar.dart';
 import 'package:sweetmanager/OrganizationalManagement/widgets/category_tabs.dart';
 import 'package:sweetmanager/OrganizationalManagement/widgets/hotel_card.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final HotelService _hotelService = HotelService();
+  final RoomService _roomService = RoomService(); // Add room service
+  final TextEditingController _searchController = TextEditingController();
 
-  HotelService hotelService = HotelService();
+  // State variables
+  int _selectedCategoryIndex = 0;
+  bool _isLoading = true;
+  bool _hasError = false;
+  String? _errorMessage;
 
-  int selectedCategoryIndex = 0;
-  TextEditingController searchController = TextEditingController();
-  List<Hotel> hotels = [];
-  List<Hotel> filteredHotels = [];
-  Map<int, Multimedia> multimediaList = {};
-  Map<int, Multimedia> logoList = {};
-  Map<int, List<Multimedia>> multimediaDetailList = {};
+  // Data
+  List<Hotel> _hotels = [];
+  List<Hotel> _filteredHotels = [];
+  Map<int, Multimedia> _multimediaList = {};
+  Map<int, Multimedia> _logoList = {};
+  Map<int, List<Multimedia>> _multimediaDetailList = {};
+  Map<int, int> _hotelMinimumPrices = {}; // Add minimum prices map
 
-
-  final List<CategoryTab> categories = [
+  // Categories configuration
+  final List<CategoryTab> _categories = [
     CategoryTab(
       icon: SvgPicture.asset('assets/icons/trophy_icon.svg', width: 24, height: 24),
       label: 'Featured'
@@ -55,7 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
       label: 'Master Bedroom'
     ),
   ];
-  final List<String> categoryValues = [
+
+  final List<String> _categoryValues = [
     'FEATURED',
     'NEAR_THE_LAKE',
     'WITH_A_POOL',
@@ -64,96 +73,187 @@ class _HomeScreenState extends State<HomeScreen> {
     'SUITE'
   ];
 
-
   @override
   void initState() {
     super.initState();
-    loadData();
+    _initializeData();
   }
 
-  Future<void> loadData() async {
-    hotels = await hotelService.getHotels();
-  
-    for (var hotel in hotels) {
-      Multimedia? multimediaMain = await hotelService.getMainHotelMultimedia(hotel.id);
-      Multimedia? logo = await hotelService.getHotelLogoMultimedia(hotel.id);
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
-      List<Multimedia> multimediaDetails = await hotelService.getHotelDetailMultimedia(hotel.id);
+  Future<void> _initializeData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _errorMessage = null;
+      });
 
-      if (multimediaMain != null) {
-        multimediaList[hotel.id] = multimediaMain;
-      }
-      if (logo != null) {
-        logoList[hotel.id] = logo;
-      }
-
-      if (multimediaDetails.isNotEmpty) {
-        multimediaDetailList[hotel.id] = multimediaDetails;
-      } else {
-        multimediaDetailList[hotel.id] = [];
-      } 
+      await _loadHotelsData();
+      
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error initializing data: $e');
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = e.toString();
+      });
     }
-    print('Loaded $hotels');
-
-    filteredHotels = hotels;
-    setState(() {});
   }
 
-  void filterHotels(String query) {
+  Future<void> _loadHotelsData() async {
+    try {
+      print('Loading hotels data...');
+      
+      // Load hotels based on selected category
+      if (_selectedCategoryIndex == 0) {
+        _hotels = await _hotelService.getHotels();
+        print('Loaded ${_hotels.length} featured hotels');
+      } else {
+        String selectedCategory = _categoryValues[_selectedCategoryIndex];
+        print('Loading hotels for category: $selectedCategory');
+        _hotels = await _hotelService.getHotelByCategory(selectedCategory);
+        print('Loaded ${_hotels.length} hotels in category $selectedCategory');
+      }
+
+      // Clear previous multimedia data
+      _multimediaList.clear();
+      _logoList.clear();
+      _multimediaDetailList.clear();
+      _hotelMinimumPrices.clear(); // Clear previous prices
+
+      // Load multimedia and prices for each hotel
+      await _loadMultimediaForHotels();
+      await _loadMinimumPricesForHotels(); // Load minimum prices
+      
+      // Apply current search filter
+      _applySearchFilter(_searchController.text);
+      
+      print('Hotels data loaded successfully');
+    } catch (e) {
+      print('Error loading hotels data: $e');
+      throw Exception('Failed to load hotels: $e');
+    }
+  }
+
+  Future<void> _loadMultimediaForHotels() async {
+    print('Loading multimedia for ${_hotels.length} hotels...');
+    
+    for (var hotel in _hotels) {
+      try {
+        // Load multimedia concurrently for better performance
+        final futures = await Future.wait([
+          _hotelService.getMainHotelMultimedia(hotel.id),
+          _hotelService.getHotelLogoMultimedia(hotel.id),
+          _hotelService.getHotelDetailMultimedia(hotel.id),
+        ]);
+
+        final multimediaMain = futures[0] as Multimedia?;
+        final logo = futures[1] as Multimedia?;
+        final multimediaDetails = futures[2] as List<Multimedia>;
+
+        if (multimediaMain != null) {
+          _multimediaList[hotel.id] = multimediaMain;
+          print('Loaded main image for hotel ${hotel.name}: ${multimediaMain.url}');
+        } else {
+          print('No main image found for hotel ${hotel.name}');
+        }
+
+        if (logo != null) {
+          _logoList[hotel.id] = logo;
+          print('Loaded logo for hotel ${hotel.name}: ${logo.url}');
+        } else {
+          print('No logo found for hotel ${hotel.name}');
+        }
+
+        _multimediaDetailList[hotel.id] = multimediaDetails;
+        print('Loaded ${multimediaDetails.length} detail images for hotel ${hotel.name}');
+
+      } catch (e) {
+        print('Error loading multimedia for hotel ${hotel.name}: $e');
+        // Continue with other hotels even if one fails
+        _multimediaDetailList[hotel.id] = [];
+      }
+    }
+    
+    print('Multimedia loading completed');
+  }
+
+  Future<void> _loadMinimumPricesForHotels() async {
+    print('Loading minimum prices for ${_hotels.length} hotels...');
+    
+    for (var hotel in _hotels) {
+      try {
+        final minimumPrice = await _roomService.getMinimumPriceRoomByHotelId(hotel.id);
+        _hotelMinimumPrices[hotel.id] = minimumPrice;
+        print('Loaded minimum price for hotel ${hotel.name}: S/ $minimumPrice');
+      } catch (e) {
+        print('Error loading minimum price for hotel ${hotel.name}: $e');
+        // Set default price if loading fails
+        _hotelMinimumPrices[hotel.id] = 0;
+      }
+    }
+    
+    print('Minimum prices loading completed');
+  }
+
+  void _applySearchFilter(String query) {
     setState(() {
       if (query.isEmpty) {
-        filteredHotels = hotels;
+        _filteredHotels = List.from(_hotels);
       } else {
-        filteredHotels = hotels.where((hotel) {
+        _filteredHotels = _hotels.where((hotel) {
           return hotel.name.toLowerCase().contains(query.toLowerCase()) ||
                  hotel.address.toLowerCase().contains(query.toLowerCase());
         }).toList();
       }
     });
+    
+    print('Applied search filter: "${query}" - Found ${_filteredHotels.length} hotels');
   }
 
-  Future<void> onCategorySelected(int index) async {
-  setState(() {
-    selectedCategoryIndex = index;
-  });
+  Future<void> _onCategorySelected(int index) async {
+    if (_selectedCategoryIndex == index) return; // No change needed
+    
+    try {
+      setState(() {
+        _selectedCategoryIndex = index;
+        _isLoading = true;
+        _hasError = false;
+      });
 
-  if (index == 0) {
-    // Featured: cargar todos los hoteles
-    hotels = await hotelService.getHotels();
-  } else {
-    String selectedCategory = categoryValues[index];
-    print('Selected category: $selectedCategory');
-    hotels = await hotelService.getHotelByCategory(selectedCategory);
-    print('Hotels in category $selectedCategory: $hotels');
+      await _loadHotelsData();
+      
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error changing category: $e');
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = e.toString();
+      });
+    }
   }
 
-  // Limpia los datos previos
-  multimediaList.clear();
-  logoList.clear();
-  multimediaDetailList.clear();
-
-  for (var hotel in hotels) {
-    Multimedia? multimediaMain = await hotelService.getMainHotelMultimedia(hotel.id);
-    Multimedia? logo = await hotelService.getHotelLogoMultimedia(hotel.id);
-    List<Multimedia> multimediaDetails = await hotelService.getHotelDetailMultimedia(hotel.id);
-
-    if (multimediaMain != null) multimediaList[hotel.id] = multimediaMain;
-    if (logo != null) logoList[hotel.id] = logo;
-    multimediaDetailList[hotel.id] = multimediaDetails;
-  }
-
-  filteredHotels = hotels;
-  setState(() {});
-}
-
-  void onHotelTap(Hotel hotel) {
+  void _onHotelTap(Hotel hotel) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => HotelDetailScreen(hotel: hotel, 
-          multimediaMain: multimediaList.isNotEmpty ? multimediaList[hotel.id] : null,
-          multimediaLogo: logoList.isNotEmpty ? logoList[hotel.id] : null,
-          multimediaDetails: multimediaDetailList.isNotEmpty ? multimediaDetailList[hotel.id] : null,
+        builder: (context) => HotelDetailScreen(
+          hotel: hotel,
+          multimediaMain: _multimediaList[hotel.id],
+          multimediaLogo: _logoList[hotel.id],
+          multimediaDetails: _multimediaDetailList[hotel.id],
+          minimumPrice: _hotelMinimumPrices[hotel.id] ?? 0,
         ),
       ),
     );
@@ -161,56 +261,132 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: CustomAppBar(
-        title: 'Sweet Manager',
-        onNotificationTap: () {
-          // Handle notification tap
-        },
-        onMenuTap: () {
-          // Handle menu tap
-        },
-      ),
-      body: Column(
+    return BaseLayout(
+      role: 'ROLE_GUEST',
+      childScreen: Column(
         children: [
+          // Search Bar
           CustomSearchBar(
             hintText: 'What will be your next destination?',
-            controller: searchController,
-            onSearch: filterHotels,
+            controller: _searchController,
+            onSearch: _applySearchFilter,
           ),
+          
+          // Category Tabs
           CategoryTabs(
-            tabs: categories,
-            selectedIndex: selectedCategoryIndex,
-            onTabSelected: onCategorySelected,
+            tabs: _categories,
+            selectedIndex: _selectedCategoryIndex,
+            onTabSelected: _onCategorySelected,
           ),
+          
+          // Content Area
           Expanded(
-            child: GridView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.75, // Ajusta la proporción altura/ancho de las cards
-              ),
-              itemCount: filteredHotels.length,
-              itemBuilder: (context, index) {
-                return HotelCard(
-                  hotel: filteredHotels[index],
-                  multimedia: multimediaList.isNotEmpty && index < multimediaList.length
-                      ? multimediaList[filteredHotels[index].id]
-                      : null,
-                  logo: logoList.isNotEmpty && index < logoList.length
-                      ? logoList[filteredHotels[index].id]
-                      : null,
-                  
-                  onTap: () => onHotelTap(filteredHotels[index]),
-                );
-              },
-            ),
+            child: _buildContent(),
           ),
-
         ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading hotels...'),
+          ],
+        ),
+      );
+    }
+
+    if (_hasError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to load hotels',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage ?? 'Unknown error occurred',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _initializeData,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_filteredHotels.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.hotel_outlined,
+              size: 64,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _searchController.text.isNotEmpty 
+                  ? 'No hotels found for "${_searchController.text}"'
+                  : 'No hotels available',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Try adjusting your search or category filter',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _initializeData,
+      child: GridView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: _filteredHotels.length,
+        itemBuilder: (context, index) {
+          final hotel = _filteredHotels[index];
+          return HotelCard(
+            hotel: hotel,
+            multimedia: _multimediaList[hotel.id],
+            logo: _logoList[hotel.id],
+            minimumPrice: _hotelMinimumPrices[hotel.id] ?? 0, // Pass minimum price
+            onTap: () => _onHotelTap(hotel),
+          );
+        },
       ),
     );
   }
