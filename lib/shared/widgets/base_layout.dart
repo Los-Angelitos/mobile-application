@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/auth_service.dart';
+import 'package:sweetmanager/OrganizationalManagement/widgets/custom_app_bar.dart';
 
 class BaseLayout extends StatelessWidget {
   final Widget childScreen; // The content of the screen
@@ -15,9 +16,8 @@ class BaseLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        title: const Text('Sweet Manager'),
-        backgroundColor: Colors.blue,
+      appBar: const CustomAppBar(
+        title: 'SweetManager',
       ),
       drawer: Drawer(
         child: SafeArea(

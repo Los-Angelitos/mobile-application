@@ -3,58 +3,44 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final VoidCallback? onNotificationTap;
-  final VoidCallback? onMenuTap;
 
   const CustomAppBar({
-    Key? key,
+    super.key,
     required this.title,
-    this.onNotificationTap,
-    this.onMenuTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1E88E5), Color(0xFF1976D2)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+    return AppBar(
+      automaticallyImplyLeading: true, // <-- Ensures the drawer icon shows
+      title: Row(
+        children: [
+          ColorFiltered(
+            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            child: SvgPicture.asset(
+              'icons/logo.svg',
+              width: 24,
+              height: 24,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              ColorFiltered(
-                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                child: SvgPicture.asset(
-                  'icons/logo.svg',
-                  width: 24,
-                  height: 24,
-                ),
-              ),
-              SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Spacer(),
-              IconButton(
-                icon: Icon(Icons.notifications_outlined, color: Colors.white),
-                onPressed: onNotificationTap,
-              ),
-              IconButton(
-                icon: Icon(Icons.menu, color: Colors.white),
-                onPressed: onMenuTap,
-              ),
-            ],
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1E88E5), Color(0xFF1976D2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
       ),
@@ -62,5 +48,5 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight + 20);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
