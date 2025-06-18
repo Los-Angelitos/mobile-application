@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/home',
       routes: {
         '/home': (context) => const HomeView(),
-        '/profile/account': (context) => AccountPage(),
+        '/profile/account': (context) => const AccountPage(),
         '/profile/info': (context) => ProfilePage(ownerProfile: null, guestProfile: null),
         '/profile/preferences': (context) => UserPreferencesPage(),
         '/guest-reservation': (context) => const GuestReservationView(),
