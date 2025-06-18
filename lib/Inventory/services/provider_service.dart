@@ -29,7 +29,7 @@ class ProviderService extends BaseService {
 
   Future<List<Provider>> getProviders() async {
     try {
-      final token = storage.read(key: 'token');
+      final token = await storage.read(key: 'token');
       final response = await http.get(
         Uri.parse('$baseUrl/providers'),
         headers: {
@@ -51,7 +51,7 @@ class ProviderService extends BaseService {
 
   Future<Provider?> getProviderById(int id) async {
     try {
-      final token = storage.read(key: 'token');
+      final token = await storage.read(key: 'token');
       final response = await http.get(
         Uri.parse('$baseUrl/providers/$id'),
         headers: {
@@ -71,11 +71,33 @@ class ProviderService extends BaseService {
     }
   }
 
-  Future<bool> createProvider(Provider provider) async {
+  Future<bool> createProvider(Provider provider, String hotelId) async {
     try {
-      final token = storage.read(key: 'token');
+      final token = await storage.read(key: 'token');
+
+      final providerData = provider.toJson();
+      providerData['hotelId'] = hotelId;
+
       final response = await http.post(
         Uri.parse('$baseUrl/providers'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+        body: jsonEncode(providerData),
+      );
+
+      return response.statusCode == 201 || response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateProvider(int providerId, Provider provider) async {
+    try {
+      final token = await storage.read(key: 'token');
+      final response = await http.put(
+        Uri.parse('$baseUrl/providers/$providerId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token'
@@ -83,7 +105,7 @@ class ProviderService extends BaseService {
         body: jsonEncode(provider.toJson()),
       );
 
-      return response.statusCode == 201;
+      return response.statusCode == 200;
     } catch (e) {
       return false;
     }
@@ -91,7 +113,7 @@ class ProviderService extends BaseService {
 
   Future<bool> deleteProvider(int id) async {
     try {
-      final token = storage.read(key: 'token');
+      final token = await storage.read(key: 'token');
       final response = await http.delete(
         Uri.parse('$baseUrl/providers/$id'),
         headers: {
