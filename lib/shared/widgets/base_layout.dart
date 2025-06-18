@@ -126,27 +126,6 @@ class BaseLayout extends StatelessWidget {
         ),
         ListTile(
           leading: const Icon(Icons.person),
-          title: const Text('My Reservations'),
-          onTap: () {
-            Navigator.pushNamed(context, '/guest-reservation');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.person),
-          title: const Text('Profile Preferences'),
-          onTap: () {
-            Navigator.pushNamed(context, '/profile/preferences');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.person),
-          title: const Text('Profile Info'),
-          onTap: () {
-            Navigator.pushNamed(context, '/profile/info');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.person),
           title: const Text('Profile Account'),
           onTap: () {
             Navigator.pushNamed(context, '/profile/account');
