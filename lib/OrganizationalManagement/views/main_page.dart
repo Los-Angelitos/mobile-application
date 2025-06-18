@@ -4,10 +4,10 @@ import 'package:sweetmanager/OrganizationalManagement/models/hotel.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/multimedia.dart';
 import 'package:sweetmanager/OrganizationalManagement/services/hotel_service.dart';
 import 'package:sweetmanager/OrganizationalManagement/views/hotel_detail.dart';
-import 'package:sweetmanager/OrganizationalManagement/widgets/custom_app_bar.dart';
 import 'package:sweetmanager/OrganizationalManagement/widgets/search_bar.dart';
 import 'package:sweetmanager/OrganizationalManagement/widgets/category_tabs.dart';
 import 'package:sweetmanager/OrganizationalManagement/widgets/hotel_card.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -161,18 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: CustomAppBar(
-        title: 'Sweet Manager',
-        onNotificationTap: () {
-          // Handle notification tap
-        },
-        onMenuTap: () {
-          // Handle menu tap
-        },
-      ),
-      body: Column(
+    return BaseLayout(
+      childScreen: Column(
         children: [
           CustomSearchBar(
             hintText: 'What will be your next destination?',
@@ -186,8 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           Expanded(
             child: GridView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
@@ -211,7 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
         ],
-      ),
+      )
+      , role: 'ROLE_GUEST',
     );
   }
 }
