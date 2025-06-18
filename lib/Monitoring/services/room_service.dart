@@ -4,6 +4,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:sweetmanager/Monitoring/models/room_type.dart';
 import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import 'package:sweetmanager/Monitoring/models/room.dart';
+import 'package:sweetmanager/Monitoring/models/room_type.dart';
 
 class RoomService extends BaseService {
 
@@ -25,7 +26,6 @@ class RoomService extends BaseService {
     }
   }
 
-  // MÉTODO PÚBLICO: Cambiado de privado a público para acceso desde RoomsView
   Future<int?> getHotelIdFromToken() async {
     try {
       final token = await _getValidToken();
@@ -81,7 +81,7 @@ class RoomService extends BaseService {
         throw Exception('No se encontró token de autenticación válido');
       }
 
-      final hotelId = await getHotelIdFromToken(); // Usando el método público
+      final hotelId = await getHotelIdFromToken();
       if (hotelId == null) {
         throw Exception('No se pudo obtener el ID del hotel del token');
       }
@@ -122,83 +122,58 @@ class RoomService extends BaseService {
 
   Future<Room> createRoom(CreateRoomRequest request) async {
     try {
-      final hotelId = await getHotelIdFromToken(); // Usando el método público
+      final hotelId = await getHotelIdFromToken();
       if (hotelId == null) {
         throw Exception('Hotel ID not found in token');
       }
 
-      final List<Map<String, dynamic>> payloadOptions = [
-        CreateRoomRequest(
-          typeRoomId: request.typeRoomId,
-          hotelId: hotelId,
-          state: request.state,
-          roomNumber: request.roomNumber ?? request.number ?? request.name,
-        ).toJson(),
-        CreateRoomRequest(
-          typeRoomId: request.typeRoomId,
-          hotelId: hotelId,
-          state: request.state,
-          number: request.roomNumber ?? request.number ?? request.name,
-        ).toJson(),
-        CreateRoomRequest(
-          typeRoomId: request.typeRoomId,
-          hotelId: hotelId,
-          state: request.state,
-          name: request.roomNumber ?? request.number ?? request.name,
-        ).toJson(),
-      ];
+      // CORREGIDO: Crear el request con el ID especificado por el usuario
+      final createRequest = CreateRoomRequest(
+        id: request.id, // CORREGIDO: Usar el ID proporcionado por el usuario
+        typeRoomId: request.typeRoomId,
+        hotelId: hotelId,
+        state: 'DISPONIBLE', // CORREGIDO: Usar el formato esperado por la API
+        roomNumber: request.id.toString(), // Usar el ID como número de habitación
+      );
 
-      http.Response? response;
-      Object? lastError;
+      final response = await http.post(
+        Uri.parse('$baseUrl/room/create-room'),
+        headers: await _getHeaders(),
+        body: jsonEncode(createRequest.toJson()),
+      );
 
-      for (int i = 0; i < payloadOptions.length; i++) {
-        try {
-          response = await http.post(
-            Uri.parse('$baseUrl/room/create-room'),
-            headers: await _getHeaders(),
-            body: jsonEncode(payloadOptions[i]),
-          );
-
-          if (response.statusCode == 200 || response.statusCode == 201) {
-            break;
-          } else {
-            lastError = 'HTTP ${response.statusCode}: ${response.body}';
-          }
-        } catch (e) {
-          lastError = e;
-          continue;
-        }
-      }
-
-      if (response == null) {
-        throw Exception('Todos los intentos de creación fallaron. Último error: $lastError');
-      }
+      print('Request payload: ${jsonEncode(createRequest.toJson())}'); // DEBUG
+      print('Response status: ${response.statusCode}'); // DEBUG
+      print('Response body: ${response.body}'); // DEBUG
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
 
-        // Intentar crear el Room desde la respuesta del servidor
+        // CORREGIDO: Crear el Room con los datos correctos
         try {
           return Room.fromJson(responseData);
         } catch (e) {
-          // Si falla, crear un Room manual
+          print('Error parsing response, creating manual room: $e'); // DEBUG
+          // Si falla el parsing, crear un Room manual con los datos conocidos
           return Room(
-            id: DateTime.now().millisecondsSinceEpoch,
-            number: request.roomNumber ?? request.number ?? request.name ?? 'Nueva habitación',
+            id: request.id,
+            number: request.id.toString(),
             guest: '',
             checkIn: '',
             checkOut: '',
-            available: request.state == 'Disponible',
+            available: true, // Estado inicial disponible
             typeRoomId: request.typeRoomId,
-            state: request.state,
+            state: 'DISPONIBLE',
           );
         }
       } else {
+        print('HTTP Error: ${response.statusCode} - ${response.body}'); // DEBUG
         _handleHttpError(response);
         throw Exception('Error al crear habitación');
       }
 
     } catch (error) {
+      print('Exception in createRoom: $error'); // DEBUG
       if (error is Exception) {
         rethrow;
       } else {
@@ -214,11 +189,14 @@ class RoomService extends BaseService {
         throw Exception('No se encontró token de autenticación válido');
       }
 
+      // CORREGIDO: Usar el formato de estado que espera la API
+      final apiState = _convertStateToApiFormat(newState);
+
       final response = await http.put(
         Uri.parse('$baseUrl/room/update-room-state/$roomId'),
         headers: await _getHeaders(),
         body: jsonEncode({
-          'state': newState,
+          'state': apiState,
         }),
       );
 
@@ -236,6 +214,24 @@ class RoomService extends BaseService {
       } else {
         throw Exception('Error inesperado al actualizar estado: $error');
       }
+    }
+  }
+
+  // NUEVO: Método para convertir estados de la UI al formato de la API
+  String _convertStateToApiFormat(String uiState) {
+    switch (uiState) {
+      case 'Disponible':
+        return 'DISPONIBLE';
+      case 'Ocupada':
+        return 'OCUPADA';
+      case 'Mantenimiento':
+        return 'MANTENIMIENTO';
+      case 'Limpieza':
+        return 'LIMPIEZA';
+      case 'Fuera de Servicio':
+        return 'FUERA_DE_SERVICIO';
+      default:
+        return 'DISPONIBLE';
     }
   }
 
@@ -327,4 +323,73 @@ class RoomService extends BaseService {
     }
   }
   
+  Future<List<RoomType>> getRoomTypesByHotel() async {
+    try {
+      final token = await _getValidToken();
+      if (token == null) {
+        throw Exception('No se encontró token de autenticación válido');
+      }
+
+      final hotelId = await getHotelIdFromToken();
+      if (hotelId == null) {
+        throw Exception('No se pudo obtener el ID del hotel del token');
+      }
+
+      // CORREGIDO: Usar el parámetro correcto 'hotelid' (minúscula)
+      final uri = Uri.parse('$baseUrl/type-room/get-all-type-rooms').replace(
+          queryParameters: {'hotelid': hotelId.toString()} // CORREGIDO: 'hotelid' en minúscula
+      );
+
+      final response = await http.get(
+        uri,
+        headers: await _getHeaders(),
+      );
+
+      print('Room types response status: ${response.statusCode}'); // DEBUG
+      print('Room types response body: ${response.body}'); // DEBUG
+
+      if (response.statusCode == 200) {
+        final dynamic responseData = jsonDecode(response.body);
+        List<dynamic> roomTypesJson;
+
+        if (responseData is List) {
+          roomTypesJson = responseData;
+        } else if (responseData is Map && responseData.containsKey('data')) {
+          roomTypesJson = responseData['data'] as List;
+        } else {
+          return [];
+        }
+
+        // CORREGIDO: Manejar duplicados del servidor
+        final Map<int, RoomType> uniqueRoomTypes = {};
+
+        for (final json in roomTypesJson) {
+          try {
+            final roomType = RoomType.fromJson(json);
+
+            // Solo agregar si es válido y no está duplicado
+            if (roomType.id > 0) {
+              uniqueRoomTypes[roomType.id] = roomType;
+            }
+          } catch (e) {
+            print('Error parsing room type: $e, json: $json'); // DEBUG
+            continue;
+          }
+        }
+
+        final result = uniqueRoomTypes.values.toList();
+        print('Unique room types: ${result.length}'); // DEBUG
+
+        return result;
+
+      } else {
+        _handleHttpError(response);
+        return [];
+      }
+
+    } catch (error) {
+      print('Error loading room types: $error');
+      throw error;
+    }
+  }
 }
