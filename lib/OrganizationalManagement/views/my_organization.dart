@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/profile_service.dart';
+import 'package:sweetmanager/OrganizationalManagement/services/hotel_service.dart';
+import 'package:sweetmanager/OrganizationalManagement/services/admin_service.dart';
+import 'package:sweetmanager/OrganizationalManagement/models/hotel.dart';
 import 'dart:convert';
 import '../widgets/organization_card.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
@@ -14,20 +17,93 @@ class OrganizationPage extends StatefulWidget {
 
 class _OrganizationPageState extends State<OrganizationPage> {
   final ProfileService _profileService = ProfileService();
+  final HotelService _hotelService = HotelService();
+  final AdminService _adminService = AdminService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Map<String, dynamic>? currentUser;
+  Hotel? currentHotel;
+  List<Map<String, dynamic>> currentHotelAdmins = [];
   bool isLoading = true;
+  bool isHotelLoading = true;
+  bool isAdminsLoading = true;
   bool showModal = false;
+  bool showAdminModal = false;
   String? errorMessage;
   bool hasAuthError = false;
   String? userRole = '';
+
+  // Controllers para el modal de admin
+  final TextEditingController _adminEmailController = TextEditingController();
+  bool isAddingAdmin = false;
 
   @override
   void initState() {
     super.initState();
     _loadUserRole();
     _checkSessionAndLoadUser();
+    _loadHotelInfo();
+    _loadCurrentHotelAdmins();
+  }
+
+  @override
+  void dispose() {
+    _adminEmailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCurrentHotelAdmins() async {
+    try {
+      setState(() {
+        isAdminsLoading = true;
+      });
+
+      final admins = await _adminService.getCurrentHotelAdmins();
+
+      setState(() {
+        currentHotelAdmins = admins;
+        isAdminsLoading = false;
+      });
+
+      print('Loaded ${admins.length} admins for current hotel');
+    } catch (e) {
+      print('Error loading current hotel admins: $e');
+      setState(() {
+        currentHotelAdmins = [];
+        isAdminsLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadHotelInfo() async {
+    try {
+      setState(() {
+        isHotelLoading = true;
+      });
+
+      // Obtener todos los hoteles y buscar el del usuario actual
+      final hotels = await _hotelService.getHotels();
+
+      if (hotels.isNotEmpty) {
+        // Por ahora tomamos el primer hotel, pero puedes implementar lógica
+        // para obtener el hotel específico del usuario actual
+        setState(() {
+          currentHotel = hotels.first;
+          isHotelLoading = false;
+        });
+      } else {
+        setState(() {
+          currentHotel = null;
+          isHotelLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading hotel info: $e');
+      setState(() {
+        currentHotel = null;
+        isHotelLoading = false;
+      });
+    }
   }
 
   Future<void> _loadUserRole() async {
@@ -191,6 +267,125 @@ class _OrganizationPageState extends State<OrganizationPage> {
     });
   }
 
+  void _showAddAdminModal() {
+    if (hasAuthError || currentUser == null) {
+      _showAuthErrorDialog();
+      return;
+    }
+
+    setState(() {
+      showAdminModal = true;
+    });
+    _adminEmailController.clear();
+  }
+
+  void _hideAddAdminModal() {
+    setState(() {
+      showAdminModal = false;
+    });
+  }
+
+  Future<void> _addAdminToHotel() async {
+    if (_adminEmailController.text.trim().isEmpty || currentHotel == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isAddingAdmin = true;
+    });
+
+    try {
+      final email = _adminEmailController.text.trim();
+
+      // Debug: Primero verificar todos los admins disponibles
+      print('Searching for admin with email: $email');
+      final allAdmins = await _adminService.getAllAdmins();
+      print('All available admins: $allAdmins');
+
+      // Buscar el admin por email
+      Map<String, dynamic>? adminData = await _adminService.getAdminByEmail(email);
+
+      // Si no se encuentra, intentar buscar con el hotelId específico
+      if (adminData == null) {
+        print('Admin not found globally, searching in current hotel...');
+        adminData = await _adminService.getAdminByEmailAndHotel(email, currentHotel!.id);
+      }
+
+      if (adminData == null) {
+        // Mostrar información más detallada del error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Admin not found with email: $email\nPlease verify the email address is correct and the user is registered as an admin.'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        return;
+      }
+
+      // Obtener el ID del admin
+      final adminId = adminData['id'];
+
+      if (adminId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid admin data received from server'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      print('Found admin: $adminData');
+      print('Assigning admin $adminId to hotel ${currentHotel!.id}');
+
+      // Asignar el admin al hotel usando el PUT endpoint
+      final success = await _adminService.assignAdminToHotel(adminId, currentHotel!.id);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Admin ${adminData['name'] ?? adminData['username'] ?? 'Unknown'} assigned successfully to ${currentHotel!.name}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        _hideAddAdminModal();
+
+        // Recargar la información del hotel/admins
+        _loadHotelInfo();
+        _loadCurrentHotelAdmins(); // Recargar los admins del hotel actual
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to assign admin to hotel. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+
+    } catch (e) {
+      print('Error adding admin: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } finally {
+      setState(() {
+        isAddingAdmin = false;
+      });
+    }
+  }
+
   void _handleUpdateUser(Map<String, dynamic> updatedData) async {
     try {
       print('Updating user with data: $updatedData');
@@ -246,7 +441,15 @@ class _OrganizationPageState extends State<OrganizationPage> {
   Widget build(BuildContext context) {
     return BaseLayout(
       role: userRole,
-      childScreen: _buildContent(),
+      childScreen: Stack(
+        children: [
+          _buildContent(),
+
+          // Modal para agregar admin
+          if (showAdminModal)
+            _buildAddAdminModal(),
+        ],
+      ),
     );
   }
 
@@ -271,7 +474,13 @@ class _OrganizationPageState extends State<OrganizationPage> {
                     if (hasAuthError)
                       _buildErrorState()
                     else
-                      _buildUserProfile(),
+                      Column(
+                        children: [
+                          _buildUserProfile(),
+                          const SizedBox(height: 30),
+                          _buildAdminsList(),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -282,6 +491,187 @@ class _OrganizationPageState extends State<OrganizationPage> {
     );
   }
 
+  Widget _buildAdminsList() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.green.shade400, Colors.green.shade600],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.admin_panel_settings,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Hotel Administrators',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              if (isAdminsLoading)
+                const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${currentHotelAdmins.length} Admin${currentHotelAdmins.length != 1 ? 's' : ''}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          if (isAdminsLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(40),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (currentHotelAdmins.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.person_off_outlined,
+                    size: 48,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No administrators found',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No administrators are currently assigned to this hotel.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else
+          // Grid layout for admin cards similar to owner profile
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _getCardColumns(context),
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.75, // Adjust based on card height
+              ),
+              itemCount: currentHotelAdmins.length,
+              itemBuilder: (context, index) {
+                final admin = currentHotelAdmins[index];
+                return _buildAdminCard(admin);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminCard(Map<String, dynamic> admin) {
+    // Transform admin data to match UserCard expectations
+    Map<String, dynamic> adminUserData = {
+      'name': admin['name'] ?? admin['username'] ?? 'Unknown Admin',
+      'email': admin['email'],
+      'phone': admin['phone'],
+      'isActive': admin['isActive'] ?? true,
+      'lastConnection': admin['lastConnection'],
+      'lastUse': admin['lastUse'],
+      'createdAt': admin['createdAt'],
+      'updatedAt': admin['updatedAt'],
+      // Add any other fields that might be present
+      if (admin['id'] != null) 'id': admin['id'],
+      if (admin['documentNumber'] != null) 'documentNumber': admin['documentNumber'],
+      if (admin['nationality'] != null) 'nationality': admin['nationality'],
+      if (admin['birthDate'] != null) 'birthDate': admin['birthDate'],
+    };
+
+    return UserCard(
+      userData: adminUserData,
+      userRole: 'ROLE_ADMIN', // Set admin role
+      onTap: () => _showAdminDetails(adminUserData),
+    );
+  }
+
+  void _showAdminDetails(Map<String, dynamic> adminData) {
+    showDialog(
+      context: context,
+      builder: (context) => UserDetailsModal(
+        userData: adminData,
+        userRole: 'ROLE_ADMIN',
+        onClose: () => Navigator.of(context).pop(),
+      ),
+    );
+  }
+
+  int _getCardColumns(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth > 1200) {
+      return 4; // Large screens
+    } else if (screenWidth > 800) {
+      return 3; // Medium screens
+    } else if (screenWidth > 600) {
+      return 2; // Small screens
+    } else {
+      return 1; // Very small screens
+    }
+  }
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -316,23 +706,215 @@ class _OrganizationPageState extends State<OrganizationPage> {
             ),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Royal Decameron Punta Sal',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                if (isHotelLoading)
+                  const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Text(
+                    currentHotel?.name ?? 'Hotel Name Not Available',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
+                if (currentHotel != null)
+                  Text(
+                    currentHotel!.category ?? 'Category not specified',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
               ],
             ),
           ),
+          // Botón para agregar admin (solo para owners)
+          if (userRole?.contains('OWNER') == true)
+            ElevatedButton.icon(
+              onPressed: _showAddAdminModal,
+              icon: const Icon(Icons.person_add, size: 18),
+              label: const Text('Add Admin'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAddAdminModal() {
+    return Container(
+      color: Colors.black.withOpacity(0.5),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          margin: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Add Administrator',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _hideAddAdminModal,
+                    icon: const Icon(Icons.close),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Info text
+              if (currentHotel != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Adding administrator to: ${currentHotel!.name}',
+                          style: TextStyle(
+                            color: Colors.blue.shade800,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // Email input
+              const Text(
+                'Administrator Email',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _adminEmailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  hintText: 'Enter administrator email',
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.blue.shade600),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: isAddingAdmin ? null : _hideAddAdminModal,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: isAddingAdmin ? null : _addAdminToHotel,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: isAddingAdmin
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                          : const Text(
+                        'Add Admin',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
