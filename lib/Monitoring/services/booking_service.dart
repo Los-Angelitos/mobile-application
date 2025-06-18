@@ -1,7 +1,6 @@
 // services/booking_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as https;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/booking.dart';
 import '../models/hotel.dart';
 import '../services/hotel_service.dart';
@@ -60,7 +59,7 @@ class BookingService extends BaseService {
         print('Processing ${bookingsJson.length} bookings');
 
         // Obtener el hotelId del token para enriquecer las reservas
-        final hotelId = await _getHotelIdFromToken();
+        final hotelId = await tokenHelper.getLocality();
         Hotel? hotelInfo;
 
         if (hotelId != null) {
@@ -93,10 +92,8 @@ class BookingService extends BaseService {
 
             return booking;
           } catch (e) {
-            print('Error parsing booking: $e');
-            print('Booking data: $json');
             // Crear un booking con valores por defecto para datos faltantes
-            return _createBookingWithDefaults(json, hotelInfo);
+            rethrow;
           }
         }).toList();
 
@@ -106,66 +103,8 @@ class BookingService extends BaseService {
         throw Exception('Failed to load bookings: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Error in getBookingsByCustomer: $e');
       throw Exception('Error fetching bookings: $e');
     }
-  }
-
-  // Método para obtener el hotelId del token
-  Future<String?> _getHotelIdFromToken() async {
-    try {
-      final token = await storage.read(key: 'token');
-      if (token == null) {
-        print('No token found');
-        return null;
-      }
-
-      final parts = token.split('.');
-      if (parts.length != 3) {
-        print('Invalid JWT format');
-        return null;
-      }
-
-      String base64Payload = parts[1];
-      while (base64Payload.length % 4 != 0) {
-        base64Payload += '=';
-      }
-
-      final payload = json.decode(utf8.decode(base64Decode(base64Payload)));
-
-      // Buscar el hotelId en el claim específico
-      final hotelId = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/locality"];
-
-      if (hotelId != null) {
-        print('Found hotel ID in token: $hotelId');
-        return hotelId.toString();
-      }
-
-      print('Hotel ID not found in token');
-      return null;
-    } catch (e) {
-      print('Error getting hotel ID from token: $e');
-      return null;
-    }
-  }
-
-  // Método auxiliar para crear booking con valores por defecto
-  Booking _createBookingWithDefaults(Map<String, dynamic> json, Hotel? hotelInfo) {
-    return Booking(
-      id: json['id']?.toString() ?? '',
-      paymentCustomerId: json['paymentCustomerId']?.toString() ?? json['customerId']?.toString() ?? '',
-      roomId: json['roomId']?.toString() ?? json['room_id']?.toString() ?? '',
-      description: json['description']?.toString(),
-      startDate: _parseDate(json['startDate']) ?? DateTime.now(),
-      finalDate: _parseDate(json['finalDate']) ?? DateTime.now().add(const Duration(days: 1)),
-      priceRoom: _parseDouble(json['priceRoom'] ?? json['price_room'] ?? json['price']) ?? 0.0,
-      nightCount: _parseInt(json['nightCount'] ?? json['night_count']) ?? 1,
-      amount: _parseDouble(json['amount']) ?? 0.0,
-      state: json['state']?.toString()?.toLowerCase() ?? 'inactive',
-      preferenceId: json['preferenceId']?.toString() ?? json['preference_id']?.toString(),
-      hotelName: hotelInfo?.name ?? json['hotelName']?.toString() ?? json['hotel_name']?.toString() ?? 'Hotel',
-      hotelLogo: json['hotelLogo']?.toString() ?? json['hotel_logo']?.toString(),
-    );
   }
 
   // Métodos auxiliares para parsing seguro
