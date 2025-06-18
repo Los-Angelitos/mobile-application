@@ -187,13 +187,14 @@ class UserCard extends StatelessWidget {
   }
 
   Color _getStatusColor() {
-    if (userData['isActive'] == true) {
+    if (userRole?.contains('ADMIN') == true) {
+      return userData['isActive'] == true ? Colors.green : Colors.grey;
+    } else if (userData['isActive'] == true) {
       return Colors.blue;
     } else {
       return Colors.grey;
     }
   }
-
   String _getStatusText() {
     if (userData['isActive'] == true) {
       return 'ACTIVE';
