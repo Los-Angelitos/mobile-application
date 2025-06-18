@@ -379,7 +379,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (success && mounted) {
         final hotelId = await tokenHelper.getLocality();
         
-        if (hotelId == "0"){
+        if (hotelId == "0" && roleId == 1){
           Navigator.pushNamed(context, '/advice');
           return;
         }
