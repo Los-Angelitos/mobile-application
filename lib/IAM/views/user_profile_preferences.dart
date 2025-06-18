@@ -4,11 +4,15 @@ import 'package:sweetmanager/IAM/domain/model/aggregates/owner.dart';
 import 'package:sweetmanager/IAM/domain/model/entities/guest_preference.dart';
 import 'package:sweetmanager/IAM/domain/model/queries/update_guest_preferences.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/user_service.dart';
+import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
+// ignore: must_be_immutable
 class UserPreferencesPage extends StatefulWidget {
   final UserService userService = UserService();
   Guest? guestProfile;
   Owner? ownerProfile;
+
+  UserPreferencesPage({super.key});
 
   @override
   _GuestProfileScreenState createState() => _GuestProfileScreenState();
@@ -69,14 +73,14 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
       } else {
         print('No preferences found for guest ID ${widget.guestProfile!.id}');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No preferences found')),
+          const SnackBar(content: Text('No preferences found')),
         );
         return null;
       }
     } catch (e) {
       print('Error recovering guest preferences: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to recover preferences')),
+        const SnackBar(content: Text('Failed to recover preferences')),
       );
       return null;
     }
@@ -86,14 +90,14 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
     if (widget.guestProfile == null) {
       print('Guest profile is null, cannot update preferences');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Guest profile not found')),
+        const SnackBar(content: Text('Guest profile not found')),
       );
       return;
     }
 
     if (temperature <= 0 || temperature > 50 || temperature is String) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid temperature')),
+        const SnackBar(content: Text('Please enter a valid temperature')),
       );
       return;
     }
@@ -125,7 +129,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Preferences updated successfully')),
+        const SnackBar(content: Text('Preferences updated successfully')),
       );
     } catch (e) {
       print('Error updating guest preferences: $e');
@@ -142,17 +146,8 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Padding(
+    return BaseLayout(
+      childScreen: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,13 +155,13 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
             // Header
             Text(
               userFullName,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               userRole,
               style: TextStyle(
@@ -174,7 +169,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                 color: Colors.grey[600],
               ),
             ),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
 
             // Preference Items
             PreferenceItem(
@@ -187,7 +182,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                 });
               }),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
 
             PreferenceItem(
               title: 'Light Type',
@@ -199,7 +194,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                 });
               }),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
 
             PreferenceItem(
               title: 'Food Preferences',
@@ -211,7 +206,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                 });
               }),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
 
             PreferenceItem(
               title: 'Drink Preferences',
@@ -223,13 +218,13 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                 });
               }),
             ),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
 
             // Request Card Button
             GestureDetector(
               onTap: () => _showRequestCardModal(),
               child: Container(
-                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
@@ -248,7 +243,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             "Couldn't find your entry card",
                             style: TextStyle(
                               fontSize: 16,
@@ -256,7 +251,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                               color: Colors.black,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             'Request cancellation of your previous access card to obtain a new one.',
                             style: TextStyle(
@@ -272,7 +267,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                       size: 20,
                       color: Colors.grey[600],
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
                       'Request',
                       style: TextStyle(
@@ -288,6 +283,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
           ],
         ),
       ),
+      role: 'ROLE_GUEST',
     );
   }
 
@@ -325,11 +321,11 @@ class PreferenceItem extends StatelessWidget {
   final VoidCallback onEdit;
 
   const PreferenceItem({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.onEdit,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -343,7 +339,7 @@ class PreferenceItem extends StatelessWidget {
             color: Colors.grey.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 3,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -355,13 +351,13 @@ class PreferenceItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: Colors.black,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   value,
                   style: TextStyle(
@@ -402,14 +398,15 @@ class EditPreferenceDialog extends StatefulWidget {
       onUpdateTemperature; // Agregar callback para actualizar temperatura
 
   const EditPreferenceDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.currentValue,
     required this.onSave,
     this.onUpdateTemperature, // Parámetro opcional
-  }) : super(key: key);
+  });
 
   @override
+  // ignore: library_private_types_in_public_api
   _EditPreferenceDialogState createState() => _EditPreferenceDialogState();
 }
 
@@ -474,7 +471,7 @@ class _EditPreferenceDialogState extends State<EditPreferenceDialog> {
                 await widget.onUpdateTemperature!(temperature);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+                  const SnackBar(
                     content: Text('Please enter a valid temperature'),
                     backgroundColor: Colors.red,
                   ),
@@ -491,12 +488,12 @@ class _EditPreferenceDialogState extends State<EditPreferenceDialog> {
             );
             Navigator.of(context).pop();
           },
-          child: Text('Save'),
           style: ElevatedButton.styleFrom(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
+          child: const Text('Save'),
         ),
       ],
     );
