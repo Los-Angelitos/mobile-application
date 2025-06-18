@@ -29,20 +29,18 @@ class _RoomsViewState extends State<RoomsView> {
   bool _showStateModal = false;
   bool _isAddingRoom = false;
   bool _isUpdatingState = false;
+  bool _isLoadingRoomTypes = false;
   Room? _selectedRoom;
   String _newState = 'Disponible';
   String userRole = '';
 
-  final TextEditingController _roomNumberController = TextEditingController();
-  int _selectedRoomTypeId = 1;
+  // ELIMINADO: final TextEditingController _roomNumberController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  int? _selectedRoomTypeId; // Cambiado a nullable
   String _selectedNewRoomState = 'Disponible';
 
-  final List<RoomType> _roomTypes = [
-    RoomType(id: 1, name: 'Individual'),
-    RoomType(id: 2, name: 'Doble'),
-    RoomType(id: 3, name: 'Suite'),
-    RoomType(id: 4, name: 'Familiar'),
-  ];
+  // Lista de tipos de habitación
+  List<RoomType> _roomTypes = [];
 
   final List<String> _availableStates = [
     'Disponible',
@@ -57,12 +55,24 @@ class _RoomsViewState extends State<RoomsView> {
     super.initState();
     _loadUserRole();
     _loadInitialData();
+    _loadRoomTypes();
   }
 
   @override
   void dispose() {
-    _roomNumberController.dispose();
+    // ELIMINADO: _roomNumberController.dispose();
     super.dispose();
+  }
+
+  // AGREGADO: Método para generar número automático de habitación
+  int _generateNextRoomNumber() {
+    if (_rooms.isEmpty) {
+      return 101; // Comenzar con habitación 101
+    }
+
+    // Obtener el número más alto existente y sumar 1
+    final maxRoomNumber = _rooms.map((room) => room.id).reduce((a, b) => a > b ? a : b);
+    return maxRoomNumber + 1;
   }
 
   Future<void> _loadUserRole() async {
@@ -87,6 +97,44 @@ class _RoomsViewState extends State<RoomsView> {
       print('Error loading user role: $e');
       setState(() {
         userRole = 'ROLE_OWNER';
+      });
+    }
+  }
+
+  Future<void> _loadRoomTypes() async {
+    setState(() {
+      _isLoadingRoomTypes = true;
+    });
+
+    try {
+      final roomTypes = await _roomService.getRoomTypesByHotel();
+
+      // Filtrar tipos duplicados y asegurar que no haya nulls
+      final uniqueRoomTypes = <int, RoomType>{};
+      for (final roomType in roomTypes) {
+        if (roomType.id != 0) { // Excluir IDs inválidos
+          uniqueRoomTypes[roomType.id] = roomType;
+        }
+      }
+
+      final filteredRoomTypes = uniqueRoomTypes.values.toList();
+
+      setState(() {
+        _roomTypes = filteredRoomTypes;
+        if (_roomTypes.isNotEmpty) {
+          _selectedRoomTypeId = _roomTypes.first.id;
+        } else {
+          // NO agregar tipos por defecto, solo mostrar mensaje
+          _selectedRoomTypeId = null;
+        }
+        _isLoadingRoomTypes = false;
+      });
+    } catch (e) {
+      print('Error loading room types: $e');
+      setState(() {
+        _roomTypes = []; // Lista vacía en lugar de tipos por defecto
+        _selectedRoomTypeId = null;
+        _isLoadingRoomTypes = false;
       });
     }
   }
@@ -140,7 +188,6 @@ class _RoomsViewState extends State<RoomsView> {
 
   Future<Hotel?> _loadHotelInfo() async {
     try {
-      // Obtener hotelId del token
       final hotelId = await _roomService.getHotelIdFromToken();
       if (hotelId != null) {
         final hotel = await _hotelService.getHotelById(hotelId.toString());
@@ -198,23 +245,31 @@ class _RoomsViewState extends State<RoomsView> {
   }
 
   Future<void> _addRoom() async {
-    if (_roomNumberController.text.trim().isEmpty) {
-      _showErrorSnackBar('El número de habitación es requerido');
+    if (_selectedRoomTypeId == null || _selectedRoomTypeId == 0) {
+      _showErrorSnackBar('Debe seleccionar un tipo de habitación válido');
       return;
     }
 
-    if (_selectedRoomTypeId == 0) {
-      _showErrorSnackBar('El tipo de habitación es requerido');
-      return;
-    }
-
-    final existingRoom = _rooms.any((room) =>
-    room.number == _roomNumberController.text.trim() ||
-        room.number == 'Habitación ${_roomNumberController.text.trim()}'
+    // Verificar que el tipo de habitación seleccionado existe en la lista
+    final selectedRoomType = _roomTypes.firstWhere(
+          (type) => type.id == _selectedRoomTypeId,
+      orElse: () => RoomType(id: 0, name: ''),
     );
 
-    if (existingRoom) {
-      _showErrorSnackBar('La habitación ${_roomNumberController.text.trim()} ya existe');
+    if (selectedRoomType.id == 0) {
+      _showErrorSnackBar('El tipo de habitación seleccionado no es válido');
+      return;
+    }
+
+    // MODIFICADO: Generar número automáticamente
+    final roomNumberInt = _generateNextRoomNumber();
+    final roomNumberText = roomNumberInt.toString();
+
+    // Verificar que el número generado no exista (aunque no debería pasar)
+    final existingRoomById = _rooms.any((room) => room.id == roomNumberInt);
+
+    if (existingRoomById) {
+      _showErrorSnackBar('Ya existe una habitación con el número $roomNumberInt');
       return;
     }
 
@@ -223,24 +278,41 @@ class _RoomsViewState extends State<RoomsView> {
     });
 
     try {
+      // Crear el request con el ID específico generado automáticamente
       final request = CreateRoomRequest(
-        typeRoomId: _selectedRoomTypeId,
-        hotelId: 0,
-        state: _selectedNewRoomState,
-        roomNumber: _roomNumberController.text.trim(),
-        number: _roomNumberController.text.trim(),
-        name: _roomNumberController.text.trim(),
+        id: roomNumberInt, // Usar el número generado como ID
+        typeRoomId: _selectedRoomTypeId!,
+        hotelId: 0, // Se establecerá en el servicio
+        state: 'DISPONIBLE', // Usar formato de API
+        roomNumber: roomNumberText,
       );
+
+      print('Creating room with request: ${request.toJson()}'); // DEBUG
 
       await _roomService.createRoom(request);
 
       await _loadRooms();
 
       _closeAddRoomModal();
-      _showSuccessSnackBar('Habitación creada exitosamente');
+      _showSuccessSnackBar('Habitación $roomNumberText creada exitosamente');
 
     } catch (error) {
-      _showErrorSnackBar('Error al crear la habitación: ${error.toString()}');
+      print('Error creating room: $error'); // DEBUG
+
+      // MEJORADO: Manejo de errores más específico
+      String errorMessage = 'Error al crear la habitación';
+
+      if (error.toString().contains('400')) {
+        errorMessage = 'El número de habitación ya existe o es inválido';
+      } else if (error.toString().contains('401')) {
+        errorMessage = 'Tu sesión ha expirado. Inicia sesión nuevamente';
+      } else if (error.toString().contains('403')) {
+        errorMessage = 'No tienes permisos para crear habitaciones';
+      } else if (error.toString().contains('409')) {
+        errorMessage = 'Ya existe una habitación con ese número';
+      }
+
+      _showErrorSnackBar(errorMessage);
     } finally {
       setState(() {
         _isAddingRoom = false;
@@ -302,8 +374,8 @@ class _RoomsViewState extends State<RoomsView> {
   void _openAddRoomModal() {
     setState(() {
       _showAddRoomModal = true;
-      _roomNumberController.clear();
-      _selectedRoomTypeId = 1;
+      // ELIMINADO: _roomNumberController.clear();
+      _selectedRoomTypeId = _roomTypes.isNotEmpty ? _roomTypes.first.id : null;
       _selectedNewRoomState = 'Disponible';
     });
   }
@@ -358,6 +430,8 @@ class _RoomsViewState extends State<RoomsView> {
     }
   }
 
+  // ELIMINADO: Widget _buildRoomNumberField() ya no es necesario
+
   @override
   Widget build(BuildContext context) {
     return BaseLayout(
@@ -396,7 +470,10 @@ class _RoomsViewState extends State<RoomsView> {
                       alignment: Alignment.centerRight,
                       child: IconButton(
                         icon: const Icon(Icons.refresh, color: Colors.black87),
-                        onPressed: _loadInitialData,
+                        onPressed: () {
+                          _loadInitialData();
+                          _loadRoomTypes();
+                        },
                       ),
                     ),
                   ],
@@ -426,6 +503,16 @@ class _RoomsViewState extends State<RoomsView> {
                         color: Colors.green,
                       ),
                     ),
+                    // AGREGADO: Mostrar el próximo número que se asignará
+                    const SizedBox(height: 4),
+                    Text(
+                      'Próximo número: ${_generateNextRoomNumber()}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.blue,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -435,7 +522,7 @@ class _RoomsViewState extends State<RoomsView> {
                 child: _buildRoomsContent(),
               ),
 
-              // Botones inferiores como en la imagen
+              // Botones inferiores
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -451,7 +538,6 @@ class _RoomsViewState extends State<RoomsView> {
                 ),
                 child: Row(
                   children: [
-
                     const SizedBox(width: 16),
                     // Botón Add
                     Expanded(
@@ -574,107 +660,166 @@ class _RoomsViewState extends State<RoomsView> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Agregar Nueva Habitación',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: _closeAddRoomModal,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              TextFormField(
-                controller: _roomNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Número de Habitación',
-                  border: OutlineInputBorder(),
-                  hintText: 'Ej: 101, 202, etc.',
-                ),
-                keyboardType: TextInputType.text,
-              ),
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<int>(
-                value: _selectedRoomTypeId,
-                decoration: const InputDecoration(
-                  labelText: 'Tipo de Habitación',
-                  border: OutlineInputBorder(),
-                ),
-                items: _roomTypes.map((type) {
-                  return DropdownMenuItem<int>(
-                    value: type.id,
-                    child: Text(type.name),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedRoomTypeId = value ?? 1;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<String>(
-                value: _selectedNewRoomState,
-                decoration: const InputDecoration(
-                  labelText: 'Estado Inicial',
-                  border: OutlineInputBorder(),
-                ),
-                items: _availableStates.map((state) {
-                  return DropdownMenuItem<String>(
-                    value: state,
-                    child: Text(state),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedNewRoomState = value ?? 'Disponible';
-                  });
-                },
-              ),
-              const SizedBox(height: 20),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _closeAddRoomModal,
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _isAddingRoom ? null : _addRoom,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0066CC),
-                      foregroundColor: Colors.white,
-                    ),
-                    child: _isAddingRoom
-                        ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Agregar Nueva Habitación',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                    )
-                        : const Text('Crear Habitación'),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: _closeAddRoomModal,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // AGREGADO: Mostrar el número que se asignará automáticamente
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
                   ),
-                ],
-              ),
-            ],
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Número de habitación asignado automáticamente: ${_generateNextRoomNumber()}',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // ELIMINADO: _buildRoomNumberField(),
+
+                // Dropdown corregido para tipos de habitación
+                _isLoadingRoomTypes
+                    ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+                    : _roomTypes.isEmpty
+                    ? Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.red),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.error, color: Colors.red),
+                      SizedBox(height: 8),
+                      Text(
+                        'No hay tipos de habitación disponibles',
+                        style: TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        'Debe crear tipos de habitación primero',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+                    : DropdownButtonFormField<int>(
+                  value: _selectedRoomTypeId,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo de Habitación',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _roomTypes.map((type) {
+                    return DropdownMenuItem<int>(
+                      value: type.id,
+                      child: Text(
+                          type.price != null
+                              ? '${type.name} - S/.${type.price?.toStringAsFixed(2)}'
+                              : type.name
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedRoomTypeId = value;
+                    });
+                  },
+                  hint: const Text('Seleccionar tipo de habitación'),
+                ),
+                const SizedBox(height: 16),
+
+                DropdownButtonFormField<String>(
+                  value: _selectedNewRoomState,
+                  decoration: const InputDecoration(
+                    labelText: 'Estado Inicial',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _availableStates.map((state) {
+                    return DropdownMenuItem<String>(
+                      value: state,
+                      child: Text(state),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedNewRoomState = value ?? 'Disponible';
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: _closeAddRoomModal,
+                      child: const Text('Cancelar'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _isAddingRoom || _selectedRoomTypeId == null || _roomTypes.isEmpty
+                          ? null
+                          : _addRoom,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0066CC),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: _isAddingRoom
+                          ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                          : const Text('Crear Habitación'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -7,6 +7,7 @@ import '../services/booking_service.dart';
 import '../widgets/reservation_card.dart';
 import '../../IAM/infrastructure/auth/auth_service.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
+import '../../shared/infrastructure/misc/token_helper.dart';
 
 class ReservationsView extends StatefulWidget {
   const ReservationsView({Key? key}) : super(key: key);
@@ -19,6 +20,7 @@ class _ReservationsViewState extends State<ReservationsView> {
   final BookingService _bookingService = BookingService();
   final AuthService _authService = AuthService();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final TokenHelper _tokenHelper = TokenHelper();
 
   List<Booking> _reservations = [];
   bool _isLoading = false;
@@ -71,13 +73,16 @@ class _ReservationsViewState extends State<ReservationsView> {
         throw Exception('No está autenticado. Por favor, inicie sesión.');
       }
 
-      final customerId = await _getCustomerIdFromToken();
-      if (customerId == null) {
-        throw Exception('No se pudo obtener el ID del cliente');
+      // Verificar que se pueda obtener el hotel ID del token
+      final hotelId = await _tokenHelper.getLocality();
+      if (hotelId == null) {
+        throw Exception('No se pudo obtener el ID del hotel desde el token');
       }
 
-      print('Loading reservations for customer ID: $customerId');
-      final reservations = await _bookingService.getBookingsByCustomer(customerId);
+      print('Loading active reservations for hotel ID: $hotelId');
+
+      // Usar el nuevo método que obtiene reservas activas por hotel
+      final reservations = await _bookingService.getActiveBookingsByHotel();
 
       setState(() {
         _reservations = reservations;
@@ -88,65 +93,13 @@ class _ReservationsViewState extends State<ReservationsView> {
       setState(() {
         if (e.toString().contains('No autorizado') || e.toString().contains('No está autenticado')) {
           _error = 'Sesión expirada. Por favor, inicie sesión nuevamente.';
+        } else if (e.toString().contains('No se pudo obtener el ID del hotel')) {
+          _error = 'Error al obtener información del hotel. Verifique su sesión.';
         } else {
           _error = 'Error al cargar las reservas. Por favor, inténtalo de nuevo.';
         }
         _isLoading = false;
       });
-    }
-  }
-
-  Future<String?> _getCustomerIdFromToken() async {
-    try {
-      final token = await _authService.storage.read(key: 'token');
-      if (token == null) {
-        throw Exception('No token found');
-      }
-
-      print('Token found: ${token.substring(0, 20)}...');
-
-      final parts = token.split('.');
-      if (parts.length != 3) {
-        throw Exception('Invalid JWT format');
-      }
-
-      String base64Payload = parts[1];
-
-      while (base64Payload.length % 4 != 0) {
-        base64Payload += '=';
-      }
-
-      final payload = json.decode(utf8.decode(base64Decode(base64Payload)));
-      print('Token payload: $payload');
-
-      // Intenta diferentes claims posibles
-      final possibleClaims = [
-        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/sid",
-        "sid",
-        "sub",
-        "customer_id",
-        "customerId",
-        "id"
-      ];
-
-      String? customerId;
-      for (final claim in possibleClaims) {
-        if (payload[claim] != null) {
-          customerId = payload[claim].toString();
-          print('Found customer ID in claim "$claim": $customerId');
-          break;
-        }
-      }
-
-      if (customerId == null) {
-        print('Available claims in token: ${payload.keys.toList()}');
-        throw Exception('Customer ID not found in token');
-      }
-
-      return customerId;
-    } catch (e) {
-      print('Error getting customer ID from token: $e');
-      return null;
     }
   }
 
@@ -201,6 +154,7 @@ class _ReservationsViewState extends State<ReservationsView> {
               preferenceId: booking.preferenceId,
               hotelName: booking.hotelName,
               hotelLogo: booking.hotelLogo,
+              hotelPhone: booking.hotelPhone,
             );
           }
         });
@@ -282,7 +236,7 @@ class _ReservationsViewState extends State<ReservationsView> {
           child: const Column(
             children: [
               Text(
-                'Reservations',
+                'Active Reservations',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -292,7 +246,7 @@ class _ReservationsViewState extends State<ReservationsView> {
               ),
               SizedBox(height: 8),
               Text(
-                'Check all your reservations,\ntheir status, and be ready for\nadventure!',
+                'Manage all active reservations\nfor your hotel',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
@@ -326,7 +280,7 @@ class _ReservationsViewState extends State<ReservationsView> {
             ),
             SizedBox(height: 16),
             Text(
-              'Cargando reservas...',
+              'Cargando reservas activas...',
               style: TextStyle(
                 color: Colors.grey,
                 fontSize: 16,
@@ -382,7 +336,7 @@ class _ReservationsViewState extends State<ReservationsView> {
             ),
             SizedBox(height: 16),
             Text(
-              'No tienes reservas actualmente.',
+              'No hay reservas activas actualmente.',
               style: TextStyle(
                 color: Colors.grey,
                 fontSize: 16,

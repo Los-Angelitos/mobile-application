@@ -6,9 +6,11 @@ import '../models/booking.dart';
 import '../models/hotel.dart';
 import '../services/hotel_service.dart';
 import '../../shared/infrastructure/services/base_service.dart';
+import '../../shared/infrastructure/misc/token_helper.dart';
 
 class BookingService extends BaseService {
   final HotelService _hotelService = HotelService();
+  final TokenHelper _tokenHelper = TokenHelper();
 
   // Método para obtener headers con autenticación
   Future<Map<String, String>> _getAuthHeaders() async {
@@ -27,6 +29,100 @@ class BookingService extends BaseService {
     return headers;
   }
 
+  // Método corregido para obtener reservas activas por hotel
+  Future<List<Booking>> getActiveBookingsByHotel() async {
+    try {
+      // Obtener el hotel ID del token usando TokenHelper
+      final hotelId = await _tokenHelper.getLocality();
+      if (hotelId == null) {
+        throw Exception('No se pudo obtener el ID del hotel desde el token');
+      }
+
+      final headers = await _getAuthHeaders();
+      final url = '$baseUrl/booking/get-booking-by-hotel-id-and-state?hotelId=$hotelId&state=active';
+
+      print('Making request to: $url');
+
+      final response = await https.get(
+        Uri.parse(url),
+        headers: headers,
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        // Manejar diferentes estructuras de respuesta
+        List<dynamic> bookingsJson = [];
+
+        if (data is List) {
+          // Si la respuesta es directamente un array
+          bookingsJson = data;
+        } else if (data is Map && data['data'] != null) {
+          // Si la respuesta tiene estructura { data: [...] }
+          bookingsJson = data['data'];
+        } else if (data is Map && data.containsKey('id')) {
+          // Si la respuesta es un solo objeto
+          bookingsJson = [data];
+        }
+
+        print('Processing ${bookingsJson.length} active bookings for hotel $hotelId');
+
+        // Obtener información del hotel para enriquecer las reservas
+        Hotel? hotelInfo;
+        try {
+          hotelInfo = await _hotelService.getHotelById(hotelId);
+        } catch (e) {
+          print('Error getting hotel info: $e');
+        }
+
+        return bookingsJson.map((json) {
+          try {
+            final booking = Booking.fromJson(json);
+
+            // Enriquecer con información del hotel si está disponible
+            if (hotelInfo != null) {
+              return Booking(
+                id: booking.id,
+                paymentCustomerId: booking.paymentCustomerId,
+                roomId: booking.roomId,
+                description: booking.description,
+                startDate: booking.startDate,
+                finalDate: booking.finalDate,
+                priceRoom: booking.priceRoom,
+                nightCount: booking.nightCount,
+                amount: booking.amount,
+                state: booking.state,
+                preferenceId: booking.preferenceId,
+                hotelName: hotelInfo.name,
+                hotelLogo: null, // El API no retorna logo, mantener null
+                hotelPhone: hotelInfo.phone, // Asignar el teléfono del hotel
+              );
+            }
+
+            return booking;
+          } catch (e) {
+            print('Error parsing booking: $e');
+            print('Booking data: $json');
+            // Crear un booking con valores por defecto para datos faltantes
+            return _createBookingWithDefaults(json, hotelInfo);
+          }
+        }).toList();
+
+      } else if (response.statusCode == 401) {
+        throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+      } else {
+        throw Exception('Failed to load bookings: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error in getActiveBookingsByHotel: $e');
+      throw Exception('Error fetching active bookings: $e');
+    }
+  }
+
+  // Mantener el método original para compatibilidad (si se necesita)
   Future<List<Booking>> getBookingsByCustomer(String customerId) async {
     try {
       final headers = await _getAuthHeaders();
@@ -165,6 +261,7 @@ class BookingService extends BaseService {
       preferenceId: json['preferenceId']?.toString() ?? json['preference_id']?.toString(),
       hotelName: hotelInfo?.name ?? json['hotelName']?.toString() ?? json['hotel_name']?.toString() ?? 'Hotel',
       hotelLogo: json['hotelLogo']?.toString() ?? json['hotel_logo']?.toString(),
+      hotelPhone: hotelInfo?.phone ?? json['hotelPhone']?.toString() ?? json['hotel_phone']?.toString(),
     );
   }
 
