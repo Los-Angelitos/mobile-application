@@ -111,6 +111,32 @@ class ProviderService extends BaseService {
     }
   }
 
+  // Método de eliminación lógica (cambiar estado a inactive)
+  Future<bool> deactivateProvider(int id) async {
+    try {
+      final token = await storage.read(key: 'token');
+
+      // Primero obtenemos el proveedor actual
+      final currentProvider = await getProviderById(id);
+      if (currentProvider == null) return false;
+
+      // Creamos una copia con estado 'inactive'
+      final deactivatedProvider = Provider(
+        id: currentProvider.id,
+        name: currentProvider.name,
+        email: currentProvider.email,
+        phone: currentProvider.phone,
+        state: 'inactive', // Cambiamos el estado
+      );
+
+      // Actualizamos el proveedor
+      return await updateProvider(id, deactivatedProvider);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Mantener método de eliminación física como alternativa
   Future<bool> deleteProvider(int id) async {
     try {
       final token = await storage.read(key: 'token');
@@ -122,9 +148,41 @@ class ProviderService extends BaseService {
         },
       );
 
-      return response.statusCode == 200;
+      // Verificar más códigos de estado
+      return response.statusCode == 200 ||
+          response.statusCode == 204 ||
+          response.statusCode == 202;
     } catch (e) {
+      print('Error deleting provider: $e'); // Para debugging
       return false;
+    }
+  }
+
+  // Método mejorado para manejar errores
+  Future<Map<String, dynamic>> deleteProviderWithDetails(int id) async {
+    try {
+      final token = await storage.read(key: 'token');
+      final response = await http.delete(
+        Uri.parse('$baseUrl/providers/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+      );
+
+      return {
+        'success': response.statusCode == 200 ||
+            response.statusCode == 204 ||
+            response.statusCode == 202,
+        'statusCode': response.statusCode,
+        'message': response.body,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'statusCode': 0,
+        'message': 'Error de conexión: $e',
+      };
     }
   }
 }
