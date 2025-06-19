@@ -39,14 +39,12 @@ class _RoomsViewState extends State<RoomsView> {
   int? _selectedRoomTypeId; // Cambiado a nullable
   String _selectedNewRoomState = 'Disponible';
 
-  final List<RoomType> _roomTypes = [
+  List<RoomType> _roomTypes = [
     RoomType(id: 1, name: 'Individual', price: 0),
     RoomType(id: 2, name: 'Doble', price: 0),
     RoomType(id: 3, name: 'Suite', price: 0),
     RoomType(id: 4, name: 'Familiar', price: 0),
   ];
-  // Lista de tipos de habitación
-  List<RoomType> _roomTypes = [];
 
   final List<String> _availableStates = [
     'Disponible',
@@ -259,7 +257,7 @@ class _RoomsViewState extends State<RoomsView> {
     // Verificar que el tipo de habitación seleccionado existe en la lista
     final selectedRoomType = _roomTypes.firstWhere(
           (type) => type.id == _selectedRoomTypeId,
-      orElse: () => RoomType(id: 0, name: ''),
+      orElse: () => RoomType(id: 0, name: '', price: 0),
     );
 
     if (selectedRoomType.id == 0) {
