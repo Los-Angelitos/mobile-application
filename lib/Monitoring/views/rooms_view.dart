@@ -38,10 +38,10 @@ class _RoomsViewState extends State<RoomsView> {
   String _selectedNewRoomState = 'Disponible';
 
   final List<RoomType> _roomTypes = [
-    RoomType(id: 1, name: 'Individual'),
-    RoomType(id: 2, name: 'Doble'),
-    RoomType(id: 3, name: 'Suite'),
-    RoomType(id: 4, name: 'Familiar'),
+    RoomType(id: 1, name: 'Individual', price: 0),
+    RoomType(id: 2, name: 'Doble', price: 0),
+    RoomType(id: 3, name: 'Suite', price: 0),
+    RoomType(id: 4, name: 'Familiar', price: 0),
   ];
 
   final List<String> _availableStates = [
