@@ -49,7 +49,7 @@ class MyApp extends StatelessWidget {
         '/advice': (context) => const AdviceSetupView(),
         '/hotel/register': (context) => const HotelRegistrationScreen(),
         '/hotel/set-up': (context) => const HotelSetupScreen(),
-        '/hotel/set-up/review': (context) => const HotelSetupReviewScreen()
+        '/hotel/set-up/review': (context) => const HotelSetupReviewScreen(),
       },
     );
   }

@@ -1,19 +1,19 @@
 class RoomType {
   final int id;
   final String name;
-  final String? description;
-  final double? price;
-
+  final int price;
   RoomType({
     required this.id,
     required this.name,
-    this.description,
-    this.price,
+    required this.price,
+  final String? description;
   });
 
   factory RoomType.fromJson(Map<String, dynamic> json) {
     return RoomType(
       id: json['id'] ?? 0,
+      name: json['description'] ?? '',
+      price: json['price'] ?? '',
       // CORREGIDO: Usar 'description' como nombre si 'name' no está disponible
       name: json['name'] ?? json['description'] ?? 'Tipo sin nombre',
       description: json['description'],

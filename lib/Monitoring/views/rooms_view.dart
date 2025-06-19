@@ -39,6 +39,12 @@ class _RoomsViewState extends State<RoomsView> {
   int? _selectedRoomTypeId; // Cambiado a nullable
   String _selectedNewRoomState = 'Disponible';
 
+  final List<RoomType> _roomTypes = [
+    RoomType(id: 1, name: 'Individual', price: 0),
+    RoomType(id: 2, name: 'Doble', price: 0),
+    RoomType(id: 3, name: 'Suite', price: 0),
+    RoomType(id: 4, name: 'Familiar', price: 0),
+  ];
   // Lista de tipos de habitación
   List<RoomType> _roomTypes = [];
 

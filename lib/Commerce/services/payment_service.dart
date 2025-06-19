@@ -29,27 +29,32 @@ class PaymentService extends BaseService {
     }
   }
 
-  Future<bool> registerPaymentCustomer(int finalAmount) async {
+  Future<int> registerPaymentCustomer(int finalAmount) async {
     try {
       final token = await storage.read(key: 'token');
       final guestId = await tokenHelper.getIdentity();
-      final response = await http.post(Uri.parse('$baseUrl/payment-customer'),headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token'
-      },
-      body: jsonEncode({
-        'guestId': guestId,
-        'finalAmount': finalAmount
-      }));
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/payment-customer'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'guestId': guestId,
+          'finalAmount': finalAmount,
+        }),
+      );
 
-      if (response.statusCode == 200) {
-        return true;
+      if (response.statusCode == 201) {
+        final responseJson = jsonDecode(response.body);
+        return responseJson['id'] as int;
+      } else {
+        throw Exception('Error creating payment: ${response.statusCode}');
       }
-
-      return false;
-    }
-    catch(e) {
+    } catch (e) {
       rethrow;
     }
   }
+
 }

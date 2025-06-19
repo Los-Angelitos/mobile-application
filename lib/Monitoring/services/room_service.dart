@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:sweetmanager/Monitoring/models/room_type.dart';
@@ -294,6 +295,7 @@ class RoomService extends BaseService {
           return RoomType(
             id: json['id'] ?? 0,
             name: json['description'] ?? '', // map 'description' to 'name'
+            price: json['price'] ?? '',
           );
         }).toList();
       }
@@ -323,6 +325,35 @@ class RoomService extends BaseService {
     }
   }
   
+  Future<int> getRoomByTypeRoomId(int typeRoomId) async {
+    try {
+      final token = await storage.read(key: 'token');
+      final response = await http.get(
+        Uri.parse('$baseUrl/room/get-room-by-type-room?typeRoomId=$typeRoomId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> rooms = jsonDecode(response.body);
+
+        // Filter only rooms with status == "active"
+        final activeRooms = rooms.where((room) => room['status'] == 'active').toList();
+
+        if (activeRooms.isNotEmpty) {
+          final randomRoom = activeRooms[Random().nextInt(activeRooms.length)];
+          return randomRoom['id'] as int;
+        }
+      }
+
+      return 0; // No active room found or bad response
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<List<RoomType>> getRoomTypesByHotel() async {
     try {
       final token = await _getValidToken();
