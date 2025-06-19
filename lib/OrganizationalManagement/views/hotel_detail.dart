@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sweetmanager/Monitoring/views/type_rooms_booking.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/hotel.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/multimedia.dart';
 
@@ -136,9 +137,7 @@ class HotelDetailScreen extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () {
                             // Handle booking
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Booking ${hotel.name}...')),
-                            );
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => HotelRoomSelection(hotel: this.hotel)));
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1976D2),
