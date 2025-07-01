@@ -347,8 +347,7 @@ class BookingService extends BaseService {
       }
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = json.decode(response.body);
-        return Booking.fromJson(data);
+        return booking;
       } else {
         throw Exception('Failed to create booking: ${response.statusCode} - ${response.body}');
       }
