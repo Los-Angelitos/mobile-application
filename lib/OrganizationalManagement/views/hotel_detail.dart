@@ -9,7 +9,7 @@ class HotelDetailScreen extends StatelessWidget {
   final Multimedia? multimediaMain;
   final Multimedia? multimediaLogo;
   final List<Multimedia>? multimediaDetails;
-  final int minimumPrice;
+  final double minimumPrice;
 
   const HotelDetailScreen({
     super.key,

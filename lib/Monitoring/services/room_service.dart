@@ -307,7 +307,7 @@ class RoomService extends BaseService {
     }
   }
 
-  Future<int> getMinimumPriceRoomByHotelId(int hotelId) async {
+  Future<double> getMinimumPriceRoomByHotelId(int hotelId) async {
     try {
       final token = await storage.read(key: 'token');
       final response = await http.get(Uri.parse('$baseUrl/type-room/get-minimum-price-type-room-by-hotel-id?hotelId=$hotelId'),headers: {
@@ -316,7 +316,7 @@ class RoomService extends BaseService {
       });
       if (response.statusCode == 200) {
         final responseJson = jsonDecode(response.body);
-        return responseJson['minimumPrice'] as int;
+        return responseJson['minimumPrice'] as double;
       }
       return 0;
     }
