@@ -340,7 +340,7 @@ class RoomService extends BaseService {
         final List<dynamic> rooms = jsonDecode(response.body);
 
         // Filter only rooms with status == "active"
-        final activeRooms = rooms.where((room) => room['status'] == 'active').toList();
+        final activeRooms = rooms.where((room) => room['state'] == 'ACTIVE').toList();
 
         if (activeRooms.isNotEmpty) {
           final randomRoom = activeRooms[Random().nextInt(activeRooms.length)];
