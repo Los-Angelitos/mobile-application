@@ -99,13 +99,6 @@ class BaseLayout extends StatelessWidget {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.verified_user),
-          title: const Text('Profile Account'),
-          onTap: () {
-            Navigator.pushNamed(context, '/profile/account');
-          },
-        ),
-        ListTile(
           leading: const Icon(Icons.exit_to_app),
           title: const Text('Sign Out'),
           onTap: () {

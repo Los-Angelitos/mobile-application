@@ -7,7 +7,7 @@ class HotelCard extends StatelessWidget {
   final Multimedia? multimedia;
   final Multimedia? logo;
   final VoidCallback onTap;
-  final int minimumPrice;
+  final double minimumPrice;
   const HotelCard({
     super.key,
     required this.hotel,

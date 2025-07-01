@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<int, Multimedia> _multimediaList = {};
   Map<int, Multimedia> _logoList = {};
   Map<int, List<Multimedia>> _multimediaDetailList = {};
-  Map<int, int> _hotelMinimumPrices = {}; // Add minimum prices map
+  Map<int, double> _hotelMinimumPrices = {}; // Add minimum prices map
 
   // Categories configuration
   final List<CategoryTab> _categories = [
@@ -253,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
           multimediaMain: _multimediaList[hotel.id],
           multimediaLogo: _logoList[hotel.id],
           multimediaDetails: _multimediaDetailList[hotel.id],
-          minimumPrice: _hotelMinimumPrices[hotel.id] ?? 0,
+          minimumPrice: _hotelMinimumPrices[hotel.id] ?? 0.0,
         ),
       ),
     );
