@@ -5,7 +5,6 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:sweetmanager/Monitoring/models/room_type.dart';
 import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import 'package:sweetmanager/Monitoring/models/room.dart';
-import 'package:sweetmanager/Monitoring/models/room_type.dart';
 
 class RoomService extends BaseService {
 
