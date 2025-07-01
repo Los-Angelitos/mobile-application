@@ -31,13 +31,13 @@ class _RoomsViewState extends State<RoomsView> {
   bool _isUpdatingState = false;
   bool _isLoadingRoomTypes = false;
   Room? _selectedRoom;
-  String _newState = 'Disponible';
+  String _newState = 'Active';
   String userRole = '';
 
   // ELIMINADO: final TextEditingController _roomNumberController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   int? _selectedRoomTypeId; // Cambiado a nullable
-  String _selectedNewRoomState = 'Disponible';
+  String _selectedNewRoomState = 'Active';
 
   List<RoomType> _roomTypes = [
     RoomType(id: 1, name: 'Individual', price: 0),
@@ -47,11 +47,8 @@ class _RoomsViewState extends State<RoomsView> {
   ];
 
   final List<String> _availableStates = [
-    'Disponible',
-    'Ocupada',
-    'Mantenimiento',
-    'Limpieza',
-    'Fuera de Servicio',
+    'Active',
+    'Inactive',
   ];
 
   @override
@@ -68,10 +65,9 @@ class _RoomsViewState extends State<RoomsView> {
     super.dispose();
   }
 
-  // AGREGADO: Método para generar número automático de habitación
   int _generateNextRoomNumber() {
     if (_rooms.isEmpty) {
-      return 101; // Comenzar con habitación 101
+      return 101;
     }
 
     // Obtener el número más alto existente y sumar 1
@@ -323,7 +319,6 @@ class _RoomsViewState extends State<RoomsView> {
       });
     }
   }
-
   Future<void> _updateRoomState() async {
     if (_selectedRoom == null || _newState.isEmpty) return;
 
@@ -332,8 +327,11 @@ class _RoomsViewState extends State<RoomsView> {
     });
 
     try {
+      print('Updating room ${_selectedRoom!.id} from ${_selectedRoom!.state} to $_newState'); // DEBUG
+
       await _roomService.updateRoomState(_selectedRoom!.id, _newState);
 
+      // Actualizar el estado local
       setState(() {
         final roomIndex = _rooms.indexWhere((r) => r.id == _selectedRoom!.id);
         if (roomIndex != -1) {
@@ -343,7 +341,7 @@ class _RoomsViewState extends State<RoomsView> {
             guest: _rooms[roomIndex].guest,
             checkIn: _rooms[roomIndex].checkIn,
             checkOut: _rooms[roomIndex].checkOut,
-            available: _newState == 'Disponible',
+            available: _newState.toLowerCase() == 'active',
             typeRoomId: _rooms[roomIndex].typeRoomId,
             state: _newState,
           );
@@ -352,11 +350,33 @@ class _RoomsViewState extends State<RoomsView> {
 
       _closeStateModal();
       _showSuccessSnackBar('Estado actualizado exitosamente');
-      _refreshDataSilently();
+
+      // Recargar datos después de un breve delay
+      Future.delayed(const Duration(seconds: 1), () {
+        _refreshDataSilently();
+      });
 
     } catch (error) {
-      _showErrorSnackBar('No se pudo actualizar el estado');
+      print('Error updating room state: $error'); // DEBUG
+
+      String errorMessage = 'No se pudo actualizar el estado';
+
+      if (error.toString().contains('sesión ha expirado') ||
+          error.toString().contains('inicia sesión nuevamente')) {
+        errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+        // Aquí podrías agregar lógica para redirigir al login
+        // Navigator.pushReplacementNamed(context, '/login');
+      } else if (error.toString().contains('Token inválido')) {
+        errorMessage = 'Problema de autenticación. Por favor, inicia sesión nuevamente.';
+      } else if (error.toString().contains('permisos')) {
+        errorMessage = 'No tienes permisos para actualizar el estado de las habitaciones.';
+      } else if (error.toString().contains('servidor')) {
+        errorMessage = 'Error del servidor. Por favor, intenta más tarde.';
+      }
+
+      _showErrorSnackBar(errorMessage);
       _closeStateModal();
+
     } finally {
       setState(() {
         _isUpdatingState = false;
@@ -378,9 +398,8 @@ class _RoomsViewState extends State<RoomsView> {
   void _openAddRoomModal() {
     setState(() {
       _showAddRoomModal = true;
-      // ELIMINADO: _roomNumberController.clear();
       _selectedRoomTypeId = _roomTypes.isNotEmpty ? _roomTypes.first.id : null;
-      _selectedNewRoomState = 'Disponible';
+      _selectedNewRoomState = 'Active';
     });
   }
 
@@ -394,7 +413,7 @@ class _RoomsViewState extends State<RoomsView> {
   void _openStateModal(Room room) {
     setState(() {
       _selectedRoom = room;
-      _newState = room.state;
+      _newState = _availableStates.contains(room.state) ? room.state : 'Active';
       _showStateModal = true;
     });
   }
@@ -404,7 +423,7 @@ class _RoomsViewState extends State<RoomsView> {
       _showStateModal = false;
       _selectedRoom = null;
       _isUpdatingState = false;
-      _newState = 'Disponible';
+      _newState = 'Active';
     });
   }
 
@@ -774,9 +793,9 @@ class _RoomsViewState extends State<RoomsView> {
                 const SizedBox(height: 16),
 
                 DropdownButtonFormField<String>(
-                  value: _selectedNewRoomState,
+                  value: _newState, // Quitar la validación condicional
                   decoration: const InputDecoration(
-                    labelText: 'Estado Inicial',
+                    labelText: 'Nuevo Estado',
                     border: OutlineInputBorder(),
                   ),
                   items: _availableStates.map((state) {
@@ -787,7 +806,7 @@ class _RoomsViewState extends State<RoomsView> {
                   }).toList(),
                   onChanged: (value) {
                     setState(() {
-                      _selectedNewRoomState = value ?? 'Disponible';
+                      _newState = value ?? 'Active'; // Cambiar default a 'Active'
                     });
                   },
                 ),
@@ -881,8 +900,9 @@ class _RoomsViewState extends State<RoomsView> {
                 ),
                 const SizedBox(height: 16),
 
+                // Dropdown para seleccionar nuevo estado - CORREGIDO
                 DropdownButtonFormField<String>(
-                  value: _availableStates.contains(_newState) ? _newState : _availableStates.first,
+                  value: _newState, // Eliminado la validación condicional
                   decoration: const InputDecoration(
                     labelText: 'Nuevo Estado',
                     border: OutlineInputBorder(),
@@ -890,14 +910,57 @@ class _RoomsViewState extends State<RoomsView> {
                   items: _availableStates.map((state) {
                     return DropdownMenuItem<String>(
                       value: state,
-                      child: Text(state),
+                      child: Row(
+                        children: [
+                          Icon(
+                            state.toLowerCase() == 'active'
+                                ? Icons.check_circle
+                                : Icons.cancel,
+                            color: state.toLowerCase() == 'active' // CORREGIDO: era 'inactive'
+                                ? Colors.green
+                                : Colors.red,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(state),
+                        ],
+                      ),
                     );
                   }).toList(),
                   onChanged: (value) {
                     setState(() {
-                      _newState = value ?? 'Disponible';
+                      _newState = value ?? 'Active';
                     });
                   },
+                ),
+
+                const SizedBox(height: 12),
+
+                // Información adicional
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _newState.toLowerCase() == 'active'
+                              ? 'La habitación estará disponible para reservas'
+                              : 'La habitación no estará disponible para reservas',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
               const SizedBox(height: 20),
@@ -906,12 +969,14 @@ class _RoomsViewState extends State<RoomsView> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _closeStateModal,
+                    onPressed: _isUpdatingState ? null : _closeStateModal,
                     child: const Text('Cancelar'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _isUpdatingState ? null : _updateRoomState,
+                    onPressed: _isUpdatingState || _newState.isEmpty
+                        ? null
+                        : _updateRoomState,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0066CC),
                       foregroundColor: Colors.white,
