@@ -64,7 +64,6 @@ Future<void> _loadHotelData() async {
 
     final hotel = results[0] as Hotel;
     final images = results[1] as List<String>;
-
     setState(() {
       _hotel = hotel;
       hotelImages = images.isEmpty ? [
@@ -486,7 +485,7 @@ Future<void> _updateHotelField(String field, String value) async {
                 bottomLeft: Radius.circular(12),
               ),
               child: Image.network(
-                hotelImages[0],
+                hotelImages[0], // MAIN IMAGE
                 height: 200,
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, progress) {

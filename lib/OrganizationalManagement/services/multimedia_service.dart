@@ -69,6 +69,8 @@ class MultimediaService extends BaseService {
     }
   }
 
+
+
   Future<List<String>> getHotelImages(int hotelId) async {
     final headers = await _getAuthHeaders();
 
@@ -94,16 +96,8 @@ class MultimediaService extends BaseService {
       if (mainResponse.statusCode == 200) {
         final mainJsonData = json.decode(mainResponse.body);
         
-        if (mainJsonData is List) {
-          allImages.addAll(mainJsonData
-              .map((item) => item['url']?.toString() ?? '')
-              .where((url) => url.isNotEmpty)
-              .toList());
-        } else if (mainJsonData is Map && mainJsonData['images'] != null) {
-          allImages.addAll(List<String>.from(mainJsonData['images']));
-        } else if (mainJsonData is Map && mainJsonData['data'] != null) {
-          allImages.addAll(List<String>.from(mainJsonData['data']));
-        }
+        allImages.add(mainJsonData['url']);
+
       } else {
         print('Error en endpoint main: ${mainResponse.statusCode}');
       }
