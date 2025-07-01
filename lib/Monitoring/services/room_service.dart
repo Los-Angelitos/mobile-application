@@ -5,7 +5,6 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:sweetmanager/Monitoring/models/room_type.dart';
 import 'package:sweetmanager/shared/infrastructure/services/base_service.dart';
 import 'package:sweetmanager/Monitoring/models/room.dart';
-import 'package:sweetmanager/Monitoring/models/room_type.dart';
 
 class RoomService extends BaseService {
 
@@ -441,8 +440,9 @@ class RoomService extends BaseService {
 
       if (response.statusCode == 200) {
         final List<dynamic> rooms = jsonDecode(response.body);
-
-        final activeRooms = rooms.where((room) => room['status'] == 'active').toList();
+        
+        // Filter only rooms with status == "active"
+        final activeRooms = rooms.where((room) => room['state'] == 'ACTIVE').toList();
 
         if (activeRooms.isNotEmpty) {
           final randomRoom = activeRooms[Random().nextInt(activeRooms.length)];
