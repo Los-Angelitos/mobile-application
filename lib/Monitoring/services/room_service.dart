@@ -241,7 +241,7 @@ class RoomService extends BaseService {
 
       // PASO 3: Preparar la URL y el payload
       final url = '$baseUrl/room/update-room-state';
-      final payload = jsonEncode({'id': int.parse(apiState), 'state': apiState});
+      final payload = jsonEncode({'id': roomId, 'state': apiState});
 
       print('Update URL: $url'); // DEBUG
       print('Update payload: $payload'); // DEBUG
