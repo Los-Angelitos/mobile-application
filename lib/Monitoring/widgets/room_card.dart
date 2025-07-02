@@ -26,10 +26,10 @@ class RoomCardWidget extends StatelessWidget {
                 aspectRatio: 5 / 6,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: room.available ? const Color(0xFFE6F0FF) : const Color(0xFFF0F0F0),
+                    color: room.state.toUpperCase() == 'ACTIVE' ? const Color(0xFFE6F0FF) : const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: room.available ? const Color(0xFF0066CC) : const Color(0xFFDDD),
+                      color: room.state.toUpperCase() == 'ACTIVE' ? const Color(0xFF0066CC) : const Color(0xFFDDD),
                       width: 1,
                     ),
                   ),
@@ -121,13 +121,13 @@ class RoomCardWidget extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: room.available ? const Color(0xFFE6F0FF) : const Color(0xFFFF6B6B),
-                  foregroundColor: room.available ? const Color(0xFF0066CC) : Colors.white,
-                  disabledBackgroundColor: room.available ? const Color(0xFFE6F0FF) : const Color(0xFFFF6B6B),
-                  disabledForegroundColor: room.available ? const Color(0xFF0066CC) : Colors.white,
+                  backgroundColor: room.state.toUpperCase() == 'ACTIVE' ? const Color(0xFFE6F0FF) : const Color(0xFFFF6B6B),
+                  foregroundColor: room.state.toUpperCase() == 'ACTIVE' ? const Color(0xFF0066CC) : Colors.white,
+                  disabledBackgroundColor: room.state.toUpperCase() == 'ACTIVE' ? const Color(0xFFE6F0FF) : const Color(0xFFFF6B6B),
+                  disabledForegroundColor: room.state.toUpperCase() == 'ACTIVE' ? const Color(0xFF0066CC) : Colors.white,
                 ),
                 child: Text(
-                  room.available ? 'Disponible' : 'No Disponible',
+                  room.state.toUpperCase() == 'ACTIVE'? 'Disponible' : 'No Disponible',
                   style: const TextStyle(fontSize: 11),
                 ),
               ),

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/profile_service.dart';
 import 'package:sweetmanager/OrganizationalManagement/services/hotel_service.dart';
 import 'package:sweetmanager/OrganizationalManagement/services/admin_service.dart';
 import 'package:sweetmanager/OrganizationalManagement/models/hotel.dart';
-import 'dart:convert';
+import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 import '../widgets/organization_card.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 
 class OrganizationPage extends StatefulWidget {
-  const OrganizationPage({Key? key}) : super(key: key);
+  const OrganizationPage({super.key});
 
   @override
   State<OrganizationPage> createState() => _OrganizationPageState();
@@ -19,7 +18,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
   final ProfileService _profileService = ProfileService();
   final HotelService _hotelService = HotelService();
   final AdminService _adminService = AdminService();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final TokenHelper _tokenHelper = TokenHelper();
 
   Map<String, dynamic>? currentUser;
   Hotel? currentHotel;
@@ -40,7 +39,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserRole();
+    _loadCurrentUser();
     _checkSessionAndLoadUser();
     _loadHotelInfo();
     _loadCurrentHotelAdmins();
@@ -50,6 +49,40 @@ class _OrganizationPageState extends State<OrganizationPage> {
   void dispose() {
     _adminEmailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      setState((){
+        isLoading = true;
+        errorMessage = null;
+        hasAuthError = false;
+      });
+
+      Map<String, dynamic>? response;
+      response = await _profileService.getCurrentOwner();
+
+      if (response != null) {
+        setState(() {
+          currentUser = response;
+          isLoading = false;
+        });
+        print('Current user loaded successfully: ${currentUser?['name'] ?? 'Unknown'}');
+      } else {
+        print('No user data received from API');
+        setState(() {
+          currentUser = null;
+          isLoading = false;
+        });
+      }
+    }
+    catch(e) {
+      setState(() {
+        currentUser = null;
+        isLoading = false;
+        errorMessage = 'Failed to load user information. Please try again.';
+      });
+    }
   }
 
   Future<void> _loadCurrentHotelAdmins() async {
@@ -81,53 +114,19 @@ class _OrganizationPageState extends State<OrganizationPage> {
         isHotelLoading = true;
       });
 
+      final hotelId = await _tokenHelper.getLocality();
       // Obtener todos los hoteles y buscar el del usuario actual
-      final hotels = await _hotelService.getHotels();
+      final hotel = await _hotelService.getHotelById(int.parse(hotelId!));
 
-      if (hotels.isNotEmpty) {
-        // Por ahora tomamos el primer hotel, pero puedes implementar lógica
-        // para obtener el hotel específico del usuario actual
-        setState(() {
-          currentHotel = hotels.first;
-          isHotelLoading = false;
-        });
-      } else {
-        setState(() {
-          currentHotel = null;
-          isHotelLoading = false;
-        });
-      }
+      currentHotel = hotel;
+      setState(() {
+        isHotelLoading = false;
+      });
     } catch (e) {
       print('Error loading hotel info: $e');
       setState(() {
         currentHotel = null;
         isHotelLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadUserRole() async {
-    try {
-      final token = await _storage.read(key: 'token');
-      if (token == null) return;
-
-      final parts = token.split('.');
-      if (parts.length != 3) return;
-
-      final payload = parts[1];
-      final normalized = base64Url.normalize(payload);
-      final decoded = utf8.decode(base64Url.decode(normalized));
-      final payloadMap = json.decode(decoded);
-
-      final role = payloadMap['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']?.toString();
-
-      setState(() {
-        userRole = role ?? 'ROLE_OWNER';
-      });
-    } catch (e) {
-      print('Error loading user role: $e');
-      setState(() {
-        userRole = 'ROLE_OWNER';
       });
     }
   }
@@ -159,69 +158,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
         errorMessage = 'Authentication error. Please login again.';
         isLoading = false;
       });
-    }
-  }
-
-  Future<void> _loadCurrentUser() async {
-    try {
-      setState(() {
-        isLoading = true;
-        errorMessage = null;
-        hasAuthError = false;
-      });
-
-      print('Loading current user... Role: $userRole');
-
-      Map<String, dynamic>? response;
-
-      // Cargar el usuario basado en su rol
-      if (userRole?.contains('GUEST') == true) {
-        response = await _profileService.getCurrentGuest();
-      } else if (userRole?.contains('OWNER') == true) {
-        response = await _profileService.getCurrentOwner();
-      } else {
-        // Por defecto, intentar cargar como guest
-        response = await _profileService.getCurrentGuest();
-      }
-
-      if (response != null) {
-        setState(() {
-          currentUser = response;
-          isLoading = false;
-        });
-        print('Current user loaded successfully: ${currentUser?['name'] ?? 'Unknown'}');
-      } else {
-        print('No user data received from API');
-        setState(() {
-          currentUser = null;
-          isLoading = false;
-        });
-      }
-    } catch (error) {
-      print('Error loading current user: $error');
-
-      // Verificar si es un error de autenticación
-      if (error.toString().contains('Unauthorized') ||
-          error.toString().contains('Invalid token') ||
-          error.toString().contains('Please login again')) {
-
-        setState(() {
-          hasAuthError = true;
-          errorMessage = 'Your session has expired. Please login again.';
-          currentUser = null;
-          isLoading = false;
-        });
-
-        // Mostrar diálogo de error de autenticación
-        _showAuthErrorDialog();
-
-      } else {
-        setState(() {
-          currentUser = null;
-          isLoading = false;
-          errorMessage = 'Failed to load user information. Please try again.';
-        });
-      }
     }
   }
 
@@ -302,11 +238,6 @@ class _OrganizationPageState extends State<OrganizationPage> {
 
     try {
       final email = _adminEmailController.text.trim();
-
-      // Debug: Primero verificar todos los admins disponibles
-      print('Searching for admin with email: $email');
-      final allAdmins = await _adminService.getAllAdmins();
-      print('All available admins: $allAdmins');
 
       // Buscar el admin por email
       Map<String, dynamic>? adminData = await _adminService.getAdminByEmail(email);
@@ -603,21 +534,17 @@ class _OrganizationPageState extends State<OrganizationPage> {
               ),
             )
           else
-          // Grid layout for admin cards similar to owner profile
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: _getCardColumns(context),
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.75, // Adjust based on card height
-              ),
-              itemCount: currentHotelAdmins.length,
-              itemBuilder: (context, index) {
-                final admin = currentHotelAdmins[index];
-                return _buildAdminCard(admin);
-              },
+          // Wrap with fixed-size containers to prevent inflation
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: currentHotelAdmins.map((admin) => 
+                Container(
+                  width: 180, // Fixed width - adjust as needed
+                  height: 240, // Fixed height - adjust as needed
+                  child: _buildAdminCard(admin),
+                )
+              ).toList(),
             ),
         ],
       ),
@@ -728,7 +655,7 @@ class _OrganizationPageState extends State<OrganizationPage> {
                 const SizedBox(height: 4),
                 if (currentHotel != null)
                   Text(
-                    currentHotel!.category ?? 'Category not specified',
+                    currentHotel!.category,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade600,
