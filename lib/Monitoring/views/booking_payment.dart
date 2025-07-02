@@ -200,7 +200,7 @@ class _BookingPaymentState extends State<BookingPayment> {
             TextButton(
               onPressed: () {
                 // Navigate back to hotel list or main page
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                Navigator.of(context).pushNamed('/main');
               },
               child: const Text('OK'),
             ),
