@@ -225,12 +225,12 @@ class RoomService extends BaseService {
         case 'active':
         case 'activo':
         case 'disponible':
-          apiState = 'active';
+          apiState = 'ACTIVE';
           break;
         case 'inactive':
         case 'inactivo':
         case 'no disponible':
-          apiState = 'inactive';
+          apiState = 'INACTIVE';
           break;
         default:
           apiState = newState.toLowerCase();
@@ -240,8 +240,8 @@ class RoomService extends BaseService {
       print('Original state input: $newState'); // DEBUG
 
       // PASO 3: Preparar la URL y el payload
-      final url = '$baseUrl/room/update-room-state/$roomId';
-      final payload = jsonEncode({'state': apiState});
+      final url = '$baseUrl/room/update-room-state';
+      final payload = jsonEncode({'id': int.parse(apiState), 'state': apiState});
 
       print('Update URL: $url'); // DEBUG
       print('Update payload: $payload'); // DEBUG
@@ -266,7 +266,16 @@ class RoomService extends BaseService {
         if (response.body.isNotEmpty) {
           try {
             final responseData = jsonDecode(response.body);
-            return Room.fromJson(responseData);
+            return Room(
+              id: roomId,
+              number: roomId.toString(),
+              guest: '',
+              checkIn: '',
+              checkOut: '',
+              available: apiState == 'ACTIVE',
+              typeRoomId: 0,
+              state: apiState,
+            );
           } catch (e) {
             print('Error parsing update response: $e'); // DEBUG
           }
@@ -279,7 +288,7 @@ class RoomService extends BaseService {
           guest: '',
           checkIn: '',
           checkOut: '',
-          available: apiState == 'active',
+          available: apiState == 'ACTIVE',
           typeRoomId: 0,
           state: apiState,
         );
