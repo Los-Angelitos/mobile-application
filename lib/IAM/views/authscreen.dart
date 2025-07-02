@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:sweetmanager/IAM/infrastructure/auth/auth_service.dart';
+import 'package:sweetmanager/IAM/views/terms_and_conditions.dart';
 import 'package:sweetmanager/shared/infrastructure/misc/token_helper.dart';
 import 'package:sweetmanager/shared/widgets/base_layout.dart';
 import 'account_type_selection_screen.dart';
@@ -210,13 +211,9 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        _buildRememberMeCheckbox(),
-        const SizedBox(height: 16),
         _buildRoleSelection(),
         const SizedBox(height: 24),
         _buildLoginButton(),
-        const SizedBox(height: 16),
-        _buildForgotPasswordButton(),
       ],
     );
   }
@@ -544,21 +541,12 @@ class _AuthScreenState extends State<AuthScreen> {
               children: [
                 const TextSpan(text: "I've read and accept the "),
                 TextSpan(
-                  text: 'Terms and Conditions',
+                  text: 'Terms and Conditions and Privacy Policy',
                   style: const TextStyle(
                     color: _primaryColor,
                     decoration: TextDecoration.underline,
                   ),
                   recognizer: TapGestureRecognizer()..onTap = _showTermsAndConditions,
-                ),
-                const TextSpan(text: ' and '),
-                TextSpan(
-                  text: 'Privacy policy',
-                  style: const TextStyle(
-                    color: _primaryColor,
-                    decoration: TextDecoration.underline,
-                  ),
-                  recognizer: TapGestureRecognizer()..onTap = _showPrivacyPolicy,
                 ),
               ],
             ),
@@ -672,14 +660,9 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _showTermsAndConditions() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Terms and Conditions will be displayed here')),
-    );
-  }
-
-  void _showPrivacyPolicy() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Privacy Policy will be displayed here')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TermsAndConditionsPage()),
     );
   }
 
