@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "580047424305",
+    "project_id": "sweet-manager-iot-mobile",
+    "storage_bucket": "sweet-manager-iot-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:580047424305:android:f2e62e4fe2e8e7ccdb3e10",
+        "android_client_info": {
+          "package_name": "com.example.sweetmanager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClYPPnvI_kNDTqeAyw4z3cdV9dSHV7xfI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
