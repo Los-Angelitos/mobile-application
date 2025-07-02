@@ -8,7 +8,7 @@ import 'account_type_selection_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
-  
+
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
@@ -20,7 +20,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _rememberMe = false;
   bool _obscurePassword = true;
   String? _selectedLoginRole;
-  
+
   // Sign up controllers
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _signupEmailController = TextEditingController();
@@ -31,10 +31,11 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _obscureSignupPassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
-  
+
   // State management
   bool _isLoginTab = true;
   bool _isLoading = false;
+  bool _isLoginLoading = false; // Nueva variable para el loading del login
   final ScrollController _loginScrollController = ScrollController();
   final ScrollController _signupScrollController = ScrollController();
   final TokenHelper tokenHelper = TokenHelper();
@@ -48,8 +49,8 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     return BaseLayout(
-      role: '', 
-      childScreen: _buildAuthContent(), 
+      role: '',
+      childScreen: _buildAuthContent(),
     );
   }
 
@@ -64,7 +65,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Widget _buildAuthScreen() {
     const textStyle = TextStyle(fontSize: 14, color: Colors.grey);
-    
+
     return Padding(
       key: const ValueKey('auth_screen'),
       padding: const EdgeInsets.all(24),
@@ -75,8 +76,8 @@ class _AuthScreenState extends State<AuthScreen> {
           const Text(
             'Welcome to Sweet Manager',
             style: TextStyle(
-              fontSize: 24, 
-              fontWeight: FontWeight.w600, 
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
               color: _primaryColor,
             ),
           ),
@@ -103,8 +104,8 @@ class _AuthScreenState extends State<AuthScreen> {
         borderRadius: _borderRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1), 
-            blurRadius: 3, 
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 3,
             offset: const Offset(0, 1),
           ),
         ],
@@ -120,7 +121,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Widget _buildTab(String label, bool isLogin) {
     final bool isActive = _isLoginTab == isLogin;
-    
+
     return Expanded(
       child: GestureDetector(
         onTap: () => _switchTab(isLogin),
@@ -135,21 +136,21 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
           child: _isLoading && isActive
               ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(_primaryColor),
-                  ),
-                )
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation(_primaryColor),
+            ),
+          )
               : Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: isActive ? _primaryColor : Colors.grey,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                ),
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isActive ? _primaryColor : Colors.grey,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
         ),
       ),
     );
@@ -157,7 +158,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Widget _buildFormContent() {
     final scrollController = _isLoginTab ? _loginScrollController : _signupScrollController;
-    
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       child: Scrollbar(
@@ -177,11 +178,11 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _switchTab(bool isLogin) async {
-    if (_isLoading) return;
-    
+    if (_isLoading || _isLoginLoading) return; // Prevenir cambio durante login
+
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(milliseconds: 400));
-    
+
     setState(() {
       _isLoginTab = isLogin;
       _isLoading = false;
@@ -233,6 +234,7 @@ class _AuthScreenState extends State<AuthScreen> {
       child: TextField(
         controller: controller,
         obscureText: obscureText,
+        enabled: !_isLoginLoading, // Deshabilitar campos durante login
         decoration: InputDecoration(
           labelText: label,
           labelStyle: _labelStyle,
@@ -249,7 +251,7 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         Checkbox(
           value: _rememberMe,
-          onChanged: (value) => setState(() => _rememberMe = value ?? false),
+          onChanged: _isLoginLoading ? null : (value) => setState(() => _rememberMe = value ?? false),
           activeColor: _primaryColor,
         ),
         const Text('Remember me', style: _labelStyle),
@@ -303,16 +305,16 @@ class _AuthScreenState extends State<AuthScreen> {
   }) {
     return RadioListTile<String>(
       title: Text(
-        title, 
+        title,
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
-        subtitle, 
+        subtitle,
         style: const TextStyle(fontSize: 12, color: Colors.grey),
       ),
       value: value,
       groupValue: _selectedLoginRole,
-      onChanged: (selectedValue) => setState(() => _selectedLoginRole = selectedValue),
+      onChanged: _isLoginLoading ? null : (selectedValue) => setState(() => _selectedLoginRole = selectedValue),
       activeColor: _primaryColor,
       dense: true,
     );
@@ -322,17 +324,26 @@ class _AuthScreenState extends State<AuthScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _selectedLoginRole != null ? _handleLogin : null,
+        onPressed: (_selectedLoginRole != null && !_isLoginLoading) ? _handleLogin : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: _primaryColor,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: const RoundedRectangleBorder(borderRadius: _borderRadius),
         ),
-        child: const Text(
-          'Log in', 
+        child: _isLoginLoading
+            ? const SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation(Colors.white),
+          ),
+        )
+            : const Text(
+          'Log in',
           style: TextStyle(
-            fontSize: 16, 
-            fontWeight: FontWeight.w600, 
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
         ),
@@ -345,7 +356,7 @@ class _AuthScreenState extends State<AuthScreen> {
       child: TextButton(
         onPressed: _handleForgotPassword,
         child: const Text(
-          'Forgot my password', 
+          'Forgot my password',
           style: TextStyle(color: _primaryColor, fontSize: 14),
         ),
       ),
@@ -370,12 +381,15 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
 
+    // Activar loading
+    setState(() => _isLoginLoading = true);
+
     try {
       final bool success = await authService.login(email, password, roleId);
-      
+
       if (success && mounted) {
         final hotelId = await tokenHelper.getLocality();
-        
+
         if (hotelId == "0" && roleId == 1){
           Navigator.pushNamed(context, '/advice');
           return;
@@ -391,6 +405,11 @@ class _AuthScreenState extends State<AuthScreen> {
     } catch (e) {
       if (mounted) {
         _showErrorDialog('An error occurred while trying to log in: $e');
+      }
+    } finally {
+      // Desactivar loading
+      if (mounted) {
+        setState(() => _isLoginLoading = false);
       }
     }
   }
@@ -417,22 +436,22 @@ class _AuthScreenState extends State<AuthScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSignUpInputField(
-          controller: _fullNameController, 
+          controller: _fullNameController,
           label: 'Full name',
         ),
         const SizedBox(height: 16),
         _buildSignUpInputField(
-          controller: _signupEmailController, 
+          controller: _signupEmailController,
           label: 'Email address',
         ),
         const SizedBox(height: 16),
         _buildSignUpInputField(
-          controller: _dniController, 
+          controller: _dniController,
           label: 'DNI',
         ),
         const SizedBox(height: 16),
         _buildSignUpInputField(
-          controller: _phoneController, 
+          controller: _phoneController,
           label: 'Phone number',
         ),
         const SizedBox(height: 16),
@@ -485,12 +504,12 @@ class _AuthScreenState extends State<AuthScreen> {
           contentPadding: _fieldPadding,
           suffixIcon: toggleObscure
               ? IconButton(
-                  icon: Icon(
-                    obscureText ? Icons.visibility_off : Icons.visibility,
-                    color: Colors.grey,
-                  ),
-                  onPressed: onToggle,
-                )
+            icon: Icon(
+              obscureText ? Icons.visibility_off : Icons.visibility,
+              color: Colors.grey,
+            ),
+            onPressed: onToggle,
+          )
               : null,
         ),
       ),
@@ -515,7 +534,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const Icon(Icons.circle, size: 6, color: Colors.grey),
               const SizedBox(width: 8),
               Text(
-                requirement, 
+                requirement,
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ],
@@ -569,8 +588,8 @@ class _AuthScreenState extends State<AuthScreen> {
         child: const Text(
           'Continue',
           style: TextStyle(
-            fontSize: 16, 
-            fontWeight: FontWeight.w600, 
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
         ),
@@ -604,7 +623,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final password = _signupPasswordController.text;
     final confirmPassword = _confirmPasswordController.text;
 
-    if (fullName.isEmpty || email.isEmpty || dni.isEmpty || 
+    if (fullName.isEmpty || email.isEmpty || dni.isEmpty ||
         phone.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       _showErrorDialog('Please fill in all fields');
       return false;
@@ -635,15 +654,15 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isValidPassword(String password) {
     // At least 8 characters, one uppercase, one lowercase, one number, one special character
     return password.length >= 8 &&
-           RegExp(r'[A-Z]').hasMatch(password) &&
-           RegExp(r'[a-z]').hasMatch(password) &&
-           RegExp(r'[0-9]').hasMatch(password) &&
-           RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
+        RegExp(r'[A-Z]').hasMatch(password) &&
+        RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'[0-9]').hasMatch(password) &&
+        RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password);
   }
 
   void _showErrorDialog(String message) {
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -677,11 +696,11 @@ class _AuthScreenState extends State<AuthScreen> {
     _phoneController.dispose();
     _signupPasswordController.dispose();
     _confirmPasswordController.dispose();
-    
+
     // Dispose scroll controllers
     _loginScrollController.dispose();
     _signupScrollController.dispose();
-    
+
     super.dispose();
   }
 }
