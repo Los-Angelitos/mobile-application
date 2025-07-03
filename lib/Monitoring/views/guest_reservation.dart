@@ -54,19 +54,19 @@ class _GuestReservationScreenState extends State<GuestReservationView> {
 
   Future<void> _loadBookings() async {
     if (_customerId == null) return;
-    
+
     try {
       setState(() {
         _isLoading = true;
         _hasError = false;
       });
       final bookings = await _bookingService.getBookingsByCustomer(_customerId!);
-      
+
       setState(() {
         _bookings = bookings;
         _isLoading = false;
       });
-    
+
     } catch (e) {
       setState(() {
         _hasError = true;
@@ -214,7 +214,7 @@ class _GuestReservationScreenState extends State<GuestReservationView> {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 0.85, // Adjust this to control card height
+            childAspectRatio: 0.75, // Increased height for more space
           ),
           itemCount: _bookings.length,
           itemBuilder: (context, index) {
@@ -227,7 +227,7 @@ class _GuestReservationScreenState extends State<GuestReservationView> {
 
   Widget _buildBookingCard(Booking booking) {
     final statusColor = _getStatusColor(booking.statusText);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: _cardBackground,
@@ -241,121 +241,123 @@ class _GuestReservationScreenState extends State<GuestReservationView> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0), // Reduced padding
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.start, // Changed from spaceBetween
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Hotel Logo - Use hotelLogo if available, otherwise default icon
             Container(
-              width: 50,
-              height: 50,
+              width: 40, // Reduced size
+              height: 40, // Reduced size
               decoration: const BoxDecoration(
                 color: _primaryBlue,
                 shape: BoxShape.circle,
               ),
               child: booking.hotelLogo != null && booking.hotelLogo!.isNotEmpty
                   ? ClipOval(
-                      child: Image.network(
-                        booking.hotelLogo!,
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.hotel,
-                            color: Colors.white,
-                            size: 24,
-                          );
-                        },
-                      ),
-                    )
-                  : const Icon(
+                child: Image.network(
+                  booking.hotelLogo!,
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
                       Icons.hotel,
                       color: Colors.white,
-                      size: 24,
-                    ),
+                      size: 20, // Reduced icon size
+                    );
+                  },
+                ),
+              )
+                  : const Icon(
+                Icons.hotel,
+                color: Colors.white,
+                size: 20, // Reduced icon size
+              ),
             ),
-            
-            const SizedBox(height: 12),
-            
+
+            const SizedBox(height: 8), // Reduced spacing
+
             // Hotel Name - Use hotelName if available, otherwise description
             Text(
               booking.hotelName ?? booking.description ?? 'Hotel',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13, // Reduced font size
                 fontWeight: FontWeight.w600,
                 color: _textColor,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            
-            const SizedBox(height: 8),
-            
-            // Phone Number - Use hotelPhone if available
-            Column(
-              children: [
-                if (booking.hotelPhone != null && booking.hotelPhone!.isNotEmpty)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.phone,
-                        size: 14,
-                        color: _subtitleColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        booking.hotelPhone!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: _subtitleColor,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.confirmation_number,
-                        size: 14,
-                        color: _subtitleColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Room ${booking.roomId}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: _subtitleColor,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 4),
-                Text(
-                  '\$${booking.amount.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 12,
+
+            const SizedBox(height: 6), // Reduced spacing
+
+            // Phone Number or Room Info
+            if (booking.hotelPhone != null && booking.hotelPhone!.isNotEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.phone,
+                    size: 12, // Reduced icon size
                     color: _subtitleColor,
-                    fontWeight: FontWeight.w400,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      booking.hotelPhone!,
+                      style: const TextStyle(
+                        fontSize: 11, // Reduced font size
+                        color: _subtitleColor,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.confirmation_number,
+                    size: 12, // Reduced icon size
+                    color: _subtitleColor,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    'Room ${booking.roomId}',
+                    style: const TextStyle(
+                      fontSize: 11, // Reduced font size
+                      color: _subtitleColor,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+
+            const SizedBox(height: 3), // Reduced spacing
+
+            Text(
+              '\$${booking.amount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 11, // Reduced font size
+                color: _subtitleColor,
+                fontWeight: FontWeight.w400,
+              ),
             ),
-            
-            const SizedBox(height: 12),
-            
+
+            const SizedBox(height: 8), // Reduced spacing
+
             // Status Badge - Use statusText from your model
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Reduced padding
               decoration: BoxDecoration(
                 color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12), // Reduced border radius
                 border: Border.all(
                   color: statusColor.withOpacity(0.3),
                   width: 1,
@@ -364,35 +366,36 @@ class _GuestReservationScreenState extends State<GuestReservationView> {
               child: Text(
                 booking.statusText,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 10, // Reduced font size
                   fontWeight: FontWeight.w600,
                   color: statusColor,
                 ),
               ),
             ),
-            
-            const SizedBox(height: 12),
-            
+
+            const Spacer(), // This will push the button to the bottom
+
             // Cancel Button - Only show if booking can be cancelled
             SizedBox(
               width: double.infinity,
-              height: 36,
+              height: 32, // Reduced height
               child: OutlinedButton(
                 onPressed: booking.canCancel ? () => _showCancelDialog(booking) : null,
                 style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8), // Reduced padding
                   side: BorderSide(
-                    color: booking.canCancel 
-                        ? _subtitleColor.withOpacity(0.5)
-                        : _subtitleColor.withOpacity(0.2)
+                      color: booking.canCancel
+                          ? _subtitleColor.withOpacity(0.5)
+                          : _subtitleColor.withOpacity(0.2)
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16), // Reduced border radius
                   ),
                 ),
                 child: Text(
                   'Cancel',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11, // Reduced font size
                     fontWeight: FontWeight.w500,
                     color: booking.canCancel ? _subtitleColor : _subtitleColor.withOpacity(0.5),
                   ),
@@ -427,7 +430,7 @@ class _GuestReservationScreenState extends State<GuestReservationView> {
         return AlertDialog(
           title: const Text('Cancel Reservation'),
           content: Text(
-            'Are you sure you want to cancel your reservation for ${booking.hotelName ?? booking.description ?? 'this hotel'}?'
+              'Are you sure you want to cancel your reservation for ${booking.hotelName ?? booking.description ?? 'this hotel'}?'
           ),
           actions: [
             TextButton(
@@ -463,7 +466,7 @@ class _GuestReservationScreenState extends State<GuestReservationView> {
 
       // Replace with your actual cancel booking service call if available
       // await _bookingService.cancelBooking(booking.id);
-      
+
       // Simulate API call for now
       await Future.delayed(const Duration(seconds: 1));
 
@@ -485,7 +488,7 @@ class _GuestReservationScreenState extends State<GuestReservationView> {
     } catch (e) {
       // Close loading dialog
       if (mounted) Navigator.of(context).pop();
-      
+
       // Show error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
