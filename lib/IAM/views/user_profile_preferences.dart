@@ -163,6 +163,7 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
   String lightType = 'Warm';
   String foodPreferences = 'No Restrictions';
   String drinkPreferences = 'Water';
+  bool isSmoker = false; // Nueva variable para smoker option
 
   @override
   Widget build(BuildContext context) {
@@ -258,6 +259,24 @@ class _GuestProfileScreenState extends State<UserPreferencesPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Drink preferences updated successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Smoker Option with Save/Cancel
+              SmokerPreferenceItemWithButtons(
+                title: 'Smoker Option',
+                value: isSmoker,
+                onSave: (newValue) {
+                  setState(() {
+                    isSmoker = newValue;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Smoker preferences updated successfully'),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -434,7 +453,7 @@ class TemperatureSliderItem extends StatelessWidget {
   }
 }
 
-// Nuevo componente para dropdown con botones Save/Cancel
+// Componente para dropdown con botones Save/Cancel
 class DropdownPreferenceItemWithButtons extends StatefulWidget {
   final String title;
   final String value;
@@ -538,6 +557,152 @@ class _DropdownPreferenceItemWithButtonsState extends State<DropdownPreferenceIt
                 });
               }
             },
+          ),
+          if (hasChanged) ...[
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _cancel,
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _save,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// Nuevo componente para smoker option con botones Save/Cancel
+class SmokerPreferenceItemWithButtons extends StatefulWidget {
+  final String title;
+  final bool value;
+  final Function(bool) onSave;
+
+  const SmokerPreferenceItemWithButtons({
+    super.key,
+    required this.title,
+    required this.value,
+    required this.onSave,
+  });
+
+  @override
+  _SmokerPreferenceItemWithButtonsState createState() => _SmokerPreferenceItemWithButtonsState();
+}
+
+class _SmokerPreferenceItemWithButtonsState extends State<SmokerPreferenceItemWithButtons> {
+  late bool selectedValue;
+  late bool originalValue;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedValue = widget.value;
+    originalValue = widget.value;
+  }
+
+  @override
+  void didUpdateWidget(SmokerPreferenceItemWithButtons oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value) {
+      selectedValue = widget.value;
+      originalValue = widget.value;
+    }
+  }
+
+  bool get hasChanged => selectedValue != originalValue;
+
+  void _save() {
+    widget.onSave(selectedValue);
+    setState(() {
+      originalValue = selectedValue;
+    });
+  }
+
+  void _cancel() {
+    setState(() {
+      selectedValue = originalValue;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      selectedValue ? Icons.smoking_rooms : Icons.smoke_free,
+                      color: selectedValue ? Colors.orange[600] : Colors.green[600],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      selectedValue ? 'Smoker' : 'Non-smoker',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: selectedValue ? Colors.orange[600] : Colors.green[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: selectedValue,
+                onChanged: (bool value) {
+                  setState(() {
+                    selectedValue = value;
+                  });
+                },
+                activeColor: Colors.orange[600],
+                inactiveThumbColor: Colors.green[600],
+                inactiveTrackColor: Colors.green[200],
+              ),
+            ],
           ),
           if (hasChanged) ...[
             const SizedBox(height: 12),
