@@ -157,7 +157,7 @@ class _BookingPaymentState extends State<BookingPayment> {
       print('✅ Booking created successfully');
 
       // Show success message
-      _showSuccessDialog();
+      _showSuccessDialog(roomId);
 
     } catch (e) {
       print('❌ Payment error: $e');
@@ -171,7 +171,7 @@ class _BookingPaymentState extends State<BookingPayment> {
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog(int roomId) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -190,7 +190,7 @@ class _BookingPaymentState extends State<BookingPayment> {
             children: [
               const Text('Your booking has been confirmed for:'),
               const SizedBox(height: 10),
-              Text('• Room: ${widget.roomType.name}'),
+              Text('• Room: ${widget.roomType.name} - ${roomId}'),
               Text('• Hotel: ${widget.hotel.name}'),
               Text('• Dates: ${widget.checkInDate.day}/${widget.checkInDate.month}/${widget.checkInDate.year} - ${widget.checkOutDate.day}/${widget.checkOutDate.month}/${widget.checkOutDate.year}'),
               Text('• Total: S/ ${_totalAmount.toInt()}'),
